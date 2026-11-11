@@ -4,11 +4,21 @@ version = "0.1.0"
 description = "Policy-controlled WhatsApp commerce and customer support"
 requires-python = ">=3.12,<3.15"
 dependencies = [
-  "fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "pydantic-settings>=2.7,<3",
-  "sqlalchemy>=2.0.38,<3", "psycopg[binary,pool]>=3.2,<4", "alembic>=1.14,<2",
-  "httpx>=0.28,<1", "openai>=2,<3", "langgraph>=1,<2",
-  "langgraph-checkpoint-postgres>=3,<4", "pyjwt[crypto]>=2.10,<3",
-  "python-multipart>=0.0.22", "pillow>=12,<13"
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "pydantic-settings>=2.7,<3",
+  "sqlalchemy>=2.0.38,<3",
+  "psycopg[binary,pool]>=3.2,<4",
+  "alembic>=1.14,<2",
+  "httpx>=0.28,<1",
+  "langgraph>=1,<2",
+  "langgraph-checkpoint-postgres>=3,<4",
+  "pyjwt[crypto]>=2.10,<3",
+  "python-multipart>=0.0.22",
+  "pillow>=12,<13",
+  "twilio>=9,<10",
+  "tzdata>=2025.2",
+  "groq>=0.31,<2",
 ]
 [dependency-groups]
 dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "ruff>=0.9,<1"]

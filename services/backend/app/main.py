@@ -3,10 +3,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.core.config import get_settings
-from app.db.session import engine
+from app.persistence.session import engine
 from app.api.routes import router
 from app.api.webhooks import router as webhooks
-from app.workflows import orchestrator
+from app.api.dialog360_webhooks import router as dialog360_webhooks
+from app.core.logging import protect_webhook_logs
+from app.agents.workflows import orchestrator
 
 
 @asynccontextmanager
@@ -15,7 +17,7 @@ async def lifespan(app):
     settings.validate_runtime()
     with ExitStack() as stack:
         if settings.database_url.startswith("postgresql"):
-            from app.workflows.checkpoints import checkpoint_store
+            from app.agents.workflows.checkpoints import checkpoint_store
 
             saver = stack.enter_context(checkpoint_store())
             orchestrator.workflow = orchestrator.build_graph(saver)
@@ -37,6 +39,8 @@ app.add_middleware(
 )
 app.include_router(router)
 app.include_router(webhooks)
+app.include_router(dialog360_webhooks)
+protect_webhook_logs()
 
 
 @app.get("/health", tags=["health"])

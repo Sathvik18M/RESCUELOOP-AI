@@ -1,9 +1,15 @@
 import type { NextConfig } from "next";
 import { loadEnvConfig } from "@next/env";
 import { resolve } from "node:path";
-loadEnvConfig(resolve(process.cwd(), "../.."));
+// Next loads the app directory first; reload so the repository-root .env is included.
+loadEnvConfig(
+  resolve(process.cwd(), "../.."),
+  process.env.NODE_ENV !== "production",
+  console,
+  true,
+);
 const nextConfig: NextConfig = {
-  distDir: process.env.E2E === "true" ? ".next-e2e" : ".next",
+  distDir: process.env.NEXT_DIST_DIR || ".next-rebuild",
   poweredByHeader: false,
   devIndicators: false,
   async headers() {

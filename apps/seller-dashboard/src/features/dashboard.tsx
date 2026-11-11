@@ -1,91 +1,52 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   MessageCircle,
-  ShoppingBag,
-  Package,
+  ClipboardList,
   ShieldCheck,
-  Sparkles,
-  MapPin,
-  RotateCcw,
-  ImageIcon,
-  Star,
   ChartNoAxesCombined,
-  ListChecks,
-  Settings as SettingsIcon,
   Search,
-  Bell,
-  ChevronDown,
-  ArrowUpRight,
   LogOut,
   Menu,
-  X,
-  FlaskConical,
-  LoaderCircle,
-  CheckCircle2,
-  AlertCircle,
   RefreshCw,
+  LoaderCircle,
+  ArrowUpRight,
+  AlertCircle,
+  CalendarDays,
 } from "lucide-react";
 import { api, DEMO } from "@/lib/api";
 import { supabase } from "@/lib/auth";
-import { Workspace, CaseRecord } from "@/lib/types";
+import { Workspace } from "@/lib/types";
+import { Brand, Badge } from "@/components/ui";
 import { Overview } from "./overview";
-import {
-  Approvals,
-  DecisionModal,
-  Orders,
-  Products,
-  Pickups,
-} from "./commerce";
+import { Requests } from "./requests";
 import { Inbox } from "./inbox";
 import { Policies } from "./policies";
-import {
-  EvidenceGallery,
-  Feedback,
-  Insights,
-  Activity,
-  Settings,
-} from "./reports";
-import { Modal } from "@/components/ui";
-
+import { Insights } from "./insights";
+import { CaseDetail } from "./case-detail";
 const navigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "inbox", label: "WhatsApp inbox", icon: MessageCircle },
-  { id: "orders", label: "Orders", icon: ShoppingBag },
-  { id: "products", label: "Products & inventory", icon: Package },
-  { id: "approvals", label: "Requests & approvals", icon: Sparkles },
-  { id: "policies", label: "Policy studio", icon: ShieldCheck },
-  { id: "pickup", label: "Store pickup", icon: MapPin },
-  { id: "returns", label: "Returns & refunds", icon: RotateCcw },
-  { id: "evidence", label: "Evidence gallery", icon: ImageIcon },
-  { id: "feedback", label: "Customer feedback", icon: Star },
-  { id: "insights", label: "Insights & reports", icon: ChartNoAxesCombined },
-  { id: "activity", label: "Action log", icon: ListChecks },
+  { id: "inbox", label: "Inbox", icon: MessageCircle },
+  { id: "requests", label: "Requests", icon: ClipboardList },
+  { id: "policies", label: "Policies", icon: ShieldCheck },
+  { id: "insights", label: "Insights", icon: ChartNoAxesCombined },
 ];
-
-function Brand() {
-  return (
-    <div className="brand">
-      <span className="brand-symbol">
-        <i />
-        <i />
-      </span>
-      <span>
-        rescueloop<span className="brand-ai">AI</span>
-      </span>
-    </div>
-  );
-}
-
+const descriptions: Record<string, string> = {
+  overview: "A clear view of your customer support.",
+  inbox: "Every conversation, with the context to help.",
+  requests: "Review decisions and follow each request through.",
+  policies: "Your rules. Clear boundaries for your AI.",
+  insights: "What your customers are telling you.",
+};
 function Login({ onLogin }: { onLogin: (token: string) => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [demoToken, setDemoToken] = useState("local-rescueloop-demo");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [demoToken, setDemoToken] = useState("local-rescueloop-demo"),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -93,12 +54,12 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
     try {
       let token = demoToken;
       if (!DEMO) {
-        const { data, error } = await supabase().auth.signInWithPassword({
+        const result = await supabase().auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
-        token = data.session!.access_token;
+        if (result.error) throw result.error;
+        token = result.data.session!.access_token;
       }
       await api("/workspace", token);
       onLogin(token);
@@ -113,38 +74,33 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
       <div className="login-story">
         <Brand />
         <div>
-          <span className="eyebrow">CUSTOMER CARE, FULL CIRCLE</span>
+          <span className="eyebrow">CARE THAT COMES FULL CIRCLE</span>
           <h1>
-            Good experiences
+            A little more care.
+            <br />A lot more
             <br />
-            keep coming
-            <br />
-            <em>back around.</em>
+            <em>coming back.</em>
           </h1>
           <p>
-            One place for your conversations, decisions,
-            <br />
-            and everything that happens next.
+            Thoughtful support for your customers.
+            <br />A clear view for your business.
           </p>
         </div>
-        <span className="login-caption">
-          Thoughtful support. Connected commerce.
-        </span>
+        <span>RescueLoop AI / Seller portal</span>
       </div>
       <div className="login-form">
         <form onSubmit={submit}>
-          <span className="eyebrow">SELLER WORKSPACE</span>
+          <span className="eyebrow">SELLER PORTAL</span>
           <h2>Welcome to your loop.</h2>
           <p>
             {DEMO
-              ? "Explore the demo store and see every customer request through."
-              : "Sign in to manage your store and customer conversations."}
+              ? "Explore Loop & Co. with saved, synthetic support cases."
+              : "Sign in to your store’s support workspace."}
           </p>
           {DEMO ? (
             <>
-              <div className="demo-login">
-                <FlaskConical size={19} />
-                <span>Local demo · Synthetic customer data</span>
+              <div className="notice">
+                Local verification · Synthetic demo data
               </div>
               <label>
                 Demo access token
@@ -164,8 +120,8 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                   autoComplete="email"
+                  required
                 />
               </label>
               <label>
@@ -174,8 +130,8 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                   autoComplete="current-password"
+                  required
                 />
               </label>
             </>
@@ -186,40 +142,30 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
             </p>
           )}
           <button className="button primary full" disabled={busy}>
-            {busy ? <LoaderCircle className="spin" size={18} /> : null}
-            {DEMO ? "Enter demo workspace" : "Sign in"}
-            <ArrowUpRight size={17} />
+            {busy ? <LoaderCircle size={17} className="spin" /> : null}
+            {DEMO ? "Enter seller dashboard" : "Sign in"}
+            <ArrowUpRight size={16} />
           </button>
-          <p className="login-fine">
-            {DEMO
-              ? "Run the backend and seed the database before entering. Live services can be connected in your environment configuration."
-              : "Access is limited to authorized members of your store."}
+          <p className="helper">
+            Customers connect through WhatsApp. This workspace is for the store
+            team.
           </p>
         </form>
       </div>
     </main>
   );
 }
-
 export function Dashboard() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const section = pathname.split("/")[1] || "overview";
-  const [token, setToken] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  const [data, setData] = useState<Workspace | null>(null);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [review, setReview] = useState<CaseRecord | null>(null);
-  const [mobile, setMobile] = useState(false);
-  const [studio, setStudio] = useState(false);
-  const [toast, setToast] = useState<{ text: string; error: boolean } | null>(
-    null,
-  );
-  const notify = useCallback(
-    (text: string, error = false) => setToast({ text, error }),
-    [],
-  );
+  const section = usePathname().split("/")[1] || "overview";
+  const [token, setToken] = useState<string | null>(null),
+    [ready, setReady] = useState(false),
+    [data, setData] = useState<Workspace | null>(null),
+    [error, setError] = useState(""),
+    [search, setSearch] = useState(""),
+    [selected, setSelected] = useState<string | null>(null),
+    [mobile, setMobile] = useState(false),
+    [dates, setDates] = useState({ from: "", to: "" }),
+    [toast, setToast] = useState<{ text: string; error: boolean } | null>(null);
   useEffect(() => {
     if (DEMO) {
       setToken(sessionStorage.getItem("rescueloop-token"));
@@ -232,10 +178,10 @@ export function Dashboard() {
         setToken(data.session?.access_token || null);
         setReady(true);
       });
-      const { data: subscription } = client.auth.onAuthStateChange(
+      const { data: listener } = client.auth.onAuthStateChange(
         (_event, session) => setToken(session?.access_token || null),
       );
-      return () => subscription.subscription.unsubscribe();
+      return () => listener.subscription.unsubscribe();
     } catch {
       setReady(true);
     }
@@ -243,17 +189,21 @@ export function Dashboard() {
   const refresh = useCallback(async () => {
     if (!token) return;
     try {
-      const next = await api<Workspace>("/workspace", token);
+      const query =
+        dates.from && dates.to
+          ? "?date_from=" + dates.from + "&date_to=" + dates.to
+          : "";
+      const next = await api<Workspace>("/workspace" + query, token);
       setData(next);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not reach the backend");
     }
-  }, [token]);
+  }, [token, dates]);
   useEffect(() => {
-    refresh();
+    void refresh();
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") void refresh();
     }, 8000);
     return () => clearInterval(timer);
   }, [refresh]);
@@ -263,20 +213,21 @@ export function Dashboard() {
   }, [section]);
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 5500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setToast(null), 6500);
+    return () => clearTimeout(t);
   }, [toast]);
-  async function mutate(path: string, body: unknown, method = "POST") {
+  async function mutate(path: string, body: unknown = {}, method = "POST") {
     if (!token) return;
     try {
       await api(path, token, { method, body: JSON.stringify(body) });
       await refresh();
-      notify("Saved. Your workspace is up to date.");
+      setToast({ text: "Saved. Your workspace is up to date.", error: false });
     } catch (e) {
-      notify(
-        e instanceof Error ? e.message : "The action could not be completed",
-        true,
-      );
+      setToast({
+        text:
+          e instanceof Error ? e.message : "The action could not be completed",
+        error: true,
+      });
       throw e;
     }
   }
@@ -290,33 +241,30 @@ export function Dashboard() {
     return (
       <div className="loading">
         <LoaderCircle className="spin" />
-        <p>Opening your workspace…</p>
+        Opening your workspace…
       </div>
     );
   if (!token)
     return (
       <Login
-        onLogin={(value) => {
-          if (DEMO) sessionStorage.setItem("rescueloop-token", value);
-          setToken(value);
+        onLogin={(v) => {
+          if (DEMO) sessionStorage.setItem("rescueloop-token", v);
+          setToken(v);
         }}
       />
     );
   const current = navigation.find((n) => n.id === section);
-  const heading =
-    section === "settings"
-      ? "Store settings"
-      : current?.label || "Page not found";
+  const item = data?.cases.find((c) => c.id === selected);
   return (
     <div className="app-shell">
       {mobile && (
         <button
-          aria-label="Close navigation"
           className="nav-backdrop"
+          aria-label="Close navigation"
           onClick={() => setMobile(false)}
         />
       )}
-      <aside className={`sidebar ${mobile ? "open" : ""}`}>
+      <aside className={"sidebar " + (mobile ? "open" : "")}>
         <Link href="/" aria-label="RescueLoop home">
           <Brand />
         </Link>
@@ -324,56 +272,44 @@ export function Dashboard() {
           <span className="store-avatar">L</span>
           <div>
             <strong>{data?.merchant.name || "Your store"}</strong>
-            <small>Seller workspace</small>
+            <small>Seller portal</small>
           </div>
-          <ChevronDown size={15} />
+          <span className="store-dot" />
         </div>
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {navigation.map((n, i) => (
-            <div key={n.id}>
-              {i === 8 && (
-                <div className="nav-label secondary">INTELLIGENCE</div>
+          {navigation.map((n) => (
+            <Link
+              key={n.id}
+              className={"nav-item " + (section === n.id ? "active" : "")}
+              href={n.id === "overview" ? "/" : "/" + n.id}
+              aria-current={section === n.id ? "page" : undefined}
+            >
+              <n.icon size={19} strokeWidth={1.7} />
+              <span>{n.label}</span>
+              {n.id === "requests" && !!data?.metrics.flagged && (
+                <b>{data.metrics.flagged}</b>
               )}
-              <Link
-                href={n.id === "overview" ? "/" : `/${n.id}`}
-                className={`nav-item ${section === n.id ? "active" : ""}`}
-                aria-current={section === n.id ? "page" : undefined}
-              >
-                <n.icon size={18} strokeWidth={1.7} />
-                <span>{n.label}</span>
-                {n.id === "approvals" && !!data?.metrics.pending && (
-                  <b>{data.metrics.pending}</b>
-                )}
-              </Link>
-            </div>
+            </Link>
           ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="care-card">
-            <ShieldCheck size={20} />
+            <ShieldCheck size={21} />
             <strong>You're in control.</strong>
             <p>
-              Your policies. Your approvals.
+              Your policies guide every action.
               <br />
-              AI that follows your lead.
+              Your decisions handle the rest.
             </p>
           </div>
-          <Link
-            href="/settings"
-            className={`nav-item ${section === "settings" ? "active" : ""}`}
-          >
-            <SettingsIcon size={18} />
-            Settings
-          </Link>
           <button className="nav-item" onClick={logout}>
             <LogOut size={18} />
             Sign out
           </button>
           <div className="sidebar-version">
             <span className="live-dot" />
-            {data?.mode.demo ? "Demo workspace" : "Store workspace"}
-            <span>v0.1</span>
+            Seller workspace<span>v1.0</span>
           </div>
         </div>
       </aside>
@@ -389,272 +325,155 @@ export function Dashboard() {
             </button>
             <span>Workspace</span>
             <span>/</span>
-            <strong>{heading}</strong>
+            <strong>{current?.label || "Not found"}</strong>
           </div>
           <div className="top-actions">
-            <label className="global-search">
-              <Search size={16} />
-              <input
-                aria-label="Search current view"
-                placeholder="Search this view…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </label>
-            <button
-              className="notification-button"
-              aria-label="View pending approvals"
-              onClick={() => router.push("/approvals")}
-            >
-              <Bell size={19} />
-              {!!data?.metrics.pending && <i />}
-            </button>
+            {["requests", "inbox"].includes(section) && (
+              <label className="global-search">
+                <Search size={16} />
+                <input
+                  aria-label="Search current view"
+                  placeholder="Search this view…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+            )}
             <span className="top-divider" />
-            <button
-              className="profile"
-              aria-label="Open store settings"
-              onClick={() => router.push("/settings")}
-            >
-              <span className="avatar">S</span>
-              <span>Store owner</span>
-              <ChevronDown size={14} />
-            </button>
+            <span className="avatar">S</span>
+            <span className="profile-label">Store team</span>
           </div>
         </header>
-        <main
-          className={`workspace-content ${section === "inbox" ? "inbox-page" : ""}`}
-        >
+        <main className="workspace-content">
           <div className="page-heading">
             <div>
-              <div className="eyebrow">
-                {section === "overview"
-                  ? "A GOOD DAY TO MAKE SOMEONE'S DAY"
-                  : "LOOP & CO. / SELLER WORKSPACE"}
-              </div>
+              <span className="eyebrow">LOOP & CO. / CUSTOMER SUPPORT</span>
               <h1>
-                {section === "overview" ? "Your store, in the loop." : heading}
-              </h1>
-              <p>
                 {section === "overview"
-                  ? "Here's what's happening across your customer experience."
-                  : section === "inbox"
-                    ? "One conversation, from the first question to the final follow-up."
-                    : "Everything you need, with a clear record of what happens next."}
-              </p>
+                  ? "A little care goes a long way."
+                  : current?.label || "Page not found"}
+              </h1>
+              <p>{descriptions[section]}</p>
             </div>
             <div className="heading-actions">
+              {data && <Badge value={data.mode.service_status} />}
               <button
                 className="icon-button"
                 aria-label="Refresh workspace"
-                onClick={refresh}
+                onClick={() => void refresh()}
               >
                 <RefreshCw size={17} />
               </button>
-              {data?.mode.demo && (
-                <button className="button" onClick={() => setStudio(true)}>
-                  <FlaskConical size={16} />
-                  Demo studio
-                </button>
-              )}
-              <span className="date-chip">
-                {new Date().toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
             </div>
           </div>
+          {data && (
+            <div className="view-toolbar">
+              <div>
+                {data.mode.demo ? (
+                  <span className="demo-label">
+                    <i />
+                    Illustrative demo data · Saved support cases
+                  </span>
+                ) : (
+                  <span className="helper">
+                    Current status of cases created in this period
+                  </span>
+                )}
+              </div>
+              <div className="date-range">
+                <CalendarDays size={15} />
+                <input
+                  type="date"
+                  aria-label="Start date"
+                  value={dates.from || data.date_range.from}
+                  max={dates.to || data.date_range.to}
+                  onChange={(e) =>
+                    setDates({
+                      from: e.target.value,
+                      to: dates.to || data.date_range.to,
+                    })
+                  }
+                />
+                <span>–</span>
+                <input
+                  type="date"
+                  aria-label="End date"
+                  value={dates.to || data.date_range.to}
+                  min={dates.from || data.date_range.from}
+                  onChange={(e) =>
+                    setDates({
+                      from: dates.from || data.date_range.from,
+                      to: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
           {error && (
             <div className="error-banner" role="alert">
               <AlertCircle size={18} />
-              <span>{error}. Check that the API is running.</span>
-              <button onClick={refresh}>Retry</button>
+              <span>{error}</span>
+              <button onClick={() => void refresh()}>Retry</button>
             </div>
           )}
           {!data ? (
             <div className="loading">
               <LoaderCircle className="spin" />
-              <p>Loading store records…</p>
+              Loading store records…
             </div>
           ) : (
             <>
               {section === "overview" && (
-                <Overview data={data} onReview={setReview} />
-              )}
+                <Overview data={data} onCase={setSelected} />
+              )}{" "}
               {section === "inbox" && (
                 <Inbox
                   data={data}
-                  token={token}
                   mutate={mutate}
-                  refresh={refresh}
-                  notify={notify}
+                  onCase={setSelected}
                   search={search}
                 />
-              )}
-              {section === "orders" && <Orders data={data} search={search} />}
-              {section === "products" && (
-                <Products data={data} search={search} mutate={mutate} />
-              )}
-              {section === "approvals" && (
-                <Approvals data={data} onReview={setReview} search={search} />
-              )}
-              {section === "returns" && (
-                <Approvals
-                  data={data}
-                  onReview={setReview}
-                  search={search}
-                  refunds
-                />
-              )}
+              )}{" "}
+              {section === "requests" && (
+                <Requests data={data} onCase={setSelected} search={search} />
+              )}{" "}
               {section === "policies" && (
-                <Policies
-                  key={data.policies[0]?.version}
-                  data={data}
-                  token={token}
-                  mutate={mutate}
-                  notify={notify}
-                />
-              )}
-              {section === "pickup" && <Pickups data={data} mutate={mutate} />}
-              {section === "evidence" && (
-                <EvidenceGallery data={data} token={token} />
-              )}
-              {section === "feedback" && (
-                <Feedback data={data} search={search} />
-              )}
+                <Policies data={data} mutate={mutate} />
+              )}{" "}
               {section === "insights" && (
-                <Insights data={data} mutate={mutate} />
-              )}
-              {section === "activity" && (
-                <Activity data={data} search={search} />
-              )}
-              {section === "settings" && (
-                <Settings data={data} mutate={mutate} />
-              )}
-              {!current && section !== "settings" && (
-                <p>
-                  This workspace page doesn’t exist.{" "}
-                  <Link href="/">Return to overview.</Link>
-                </p>
-              )}
+                <Insights data={data} mutate={mutate} onCase={setSelected} />
+              )}{" "}
+              {!current && <Link href="/">Return to overview</Link>}
             </>
           )}
         </main>
         <footer className="workspace-footer">
-          <span>RescueLoop AI · Care that comes full circle.</span>
+          <span>RescueLoop AI · Care, full circle.</span>
           <span>
-            <ShieldCheck size={13} />
-            Policy-controlled actions
+            {data?.mode.ai === "demo"
+              ? "Local verification · Live integrations pending"
+              : "Seller portal · WhatsApp support"}
           </span>
         </footer>
       </div>
-      {toast && (
-        <div
-          role={toast.error ? "alert" : "status"}
-          className={`toast ${toast.error ? "toast-error" : ""}`}
-        >
-          {toast.error ? <AlertCircle size={19} /> : <CheckCircle2 size={19} />}
-          <span>{toast.text}</span>
-          <button
-            aria-label="Dismiss notification"
-            onClick={() => setToast(null)}
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-      {review && data && (
-        <DecisionModal
-          item={data.cases.find((c) => c.id === review.id) || review}
+      {item && data && (
+        <CaseDetail
+          key={item.id}
+          item={item}
           data={data}
           mutate={mutate}
-          onClose={() => setReview(null)}
+          token={token}
+          onClose={() => setSelected(null)}
         />
       )}
-      {studio && (
-        <Modal title="Demo studio" onClose={() => setStudio(false)}>
-          <div className="modal-body">
-            <p>
-              Use the inbox as the demo customer, then return to approvals as
-              the seller. Every completed action updates PostgreSQL.
-            </p>
-            <div className="demo-scenarios">
-              <button
-                onClick={() => {
-                  setStudio(false);
-                  router.push("/approvals");
-                }}
-              >
-                <span>01</span>
-                <div>
-                  <strong>Personalize a gift</strong>
-                  <p>
-                    Review the wallet engraving quote, then confirm it in the
-                    inbox.
-                  </p>
-                </div>
-                <ArrowUpRight size={18} />
-              </button>
-              <button
-                onClick={() => {
-                  setStudio(false);
-                  router.push("/inbox");
-                }}
-              >
-                <span>02</span>
-                <div>
-                  <strong>Reserve store pickup</strong>
-                  <p>
-                    Ask for a pickup slot, approve it, and confirm as the
-                    customer.
-                  </p>
-                </div>
-                <ArrowUpRight size={18} />
-              </button>
-              <button
-                onClick={() => {
-                  setStudio(false);
-                  router.push("/inbox");
-                }}
-              >
-                <span>03</span>
-                <div>
-                  <strong>Recover a failed delivery</strong>
-                  <p>
-                    Provide a redelivery address and confirm the courier
-                    request.
-                  </p>
-                </div>
-                <ArrowUpRight size={18} />
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await mutate("/demo/scenarios/delivered", {});
-                    setStudio(false);
-                    router.push("/inbox");
-                  } catch {}
-                }}
-              >
-                <span>04</span>
-                <div>
-                  <strong>Photo complaint & refund</strong>
-                  <p>
-                    Mark ORD1042 delivered, then attach a photo and request a
-                    refund.
-                  </p>
-                </div>
-                <ArrowUpRight size={18} />
-              </button>
-            </div>
-            <p className="helper">
-              Demo AI uses predictable scenarios. Payments and courier actions
-              are simulated. Connect OpenAI to enable model reasoning and image
-              analysis.
-            </p>
-          </div>
-        </Modal>
+      {toast && (
+        <div
+          className={"toast " + (toast.error ? "error" : "")}
+          role={toast.error ? "alert" : "status"}
+        >
+          {toast.text}
+        </div>
       )}
     </div>
   );

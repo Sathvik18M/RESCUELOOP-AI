@@ -6,8 +6,8 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
-from app.db.models import Membership
-from app.db.session import get_db
+from app.persistence.models import Membership
+from app.persistence.session import get_db
 
 bearer = HTTPBearer(auto_error=False)
 

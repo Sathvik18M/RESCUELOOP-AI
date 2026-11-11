@@ -41,7 +41,7 @@ def upload(merchant_id: str, content: bytes):
         )
         response.raise_for_status()
     elif settings.demo_mode and settings.app_env != "production":
-        path = ROOT / ".local/evidence" / key
+        path = ROOT / settings.evidence_root / key
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
     else:
@@ -62,8 +62,50 @@ def signed_url(key: str):
 
 
 def local_path(key: str):
-    base = (ROOT / ".local/evidence").resolve()
+    base = (ROOT / get_settings().evidence_root).resolve()
     path = (base / key).resolve()
     if not path.is_relative_to(base) or not path.is_file():
         raise HTTPException(404, "Image unavailable")
     return path
+
+
+def delete_store_evidence(merchant_id: str):
+    import re
+    import shutil
+
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", merchant_id):
+        raise ValueError("Invalid store prefix")
+    s = get_settings()
+    if s.supabase_url:
+        if not s.supabase_service_role_key:
+            raise ValueError("Private storage credentials are required for reset")
+        base = f"{s.supabase_url}/storage/v1/object"
+        headers = {"Authorization": f"Bearer {s.supabase_service_role_key}"}
+        # Re-read the first page after each deletion, including orphaned uploads.
+        while True:
+            response = httpx.post(
+                f"{base}/list/{s.supabase_storage_bucket}",
+                headers=headers,
+                json={"prefix": merchant_id, "limit": 100, "offset": 0},
+                timeout=30,
+            )
+            response.raise_for_status()
+            names = [x["name"] for x in response.json()]
+            if not names:
+                break
+            if any("/" in name or name in {".", ".."} for name in names):
+                raise ValueError("Unexpected evidence object prefix")
+            removed = httpx.request(
+                "DELETE",
+                f"{base}/{s.supabase_storage_bucket}",
+                headers=headers,
+                json={"prefixes": [merchant_id + "/" + name for name in names]},
+                timeout=30,
+            )
+            removed.raise_for_status()
+    base = (ROOT / s.evidence_root).resolve()
+    target = (base / merchant_id).resolve()
+    if target.parent != base or not target.is_relative_to(base):
+        raise ValueError("Evidence path escaped its root")
+    if target.exists():
+        shutil.rmtree(target)

@@ -3,242 +3,272 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   ArrowRight,
-  MessageCircle,
-  ShieldCheck,
+  Check,
+  Layers,
   Clock3,
-  Star,
-  Sparkles,
-  PackageCheck,
-  CircleCheck,
+  Flag,
+  CheckCircle2,
 } from "lucide-react";
-import { Workspace, CaseRecord } from "@/lib/types";
-import { Badge, ProductArt, SectionTitle, Empty } from "@/components/ui";
-import { money, shortDate, title } from "@/lib/api";
-
-export function Overview({
-  data,
-  onReview,
-}: {
-  data: Workspace;
-  onReview: (c: CaseRecord) => void;
-}) {
-  const pending = data.cases.filter((c) => c.status === "pending_seller");
-  const metrics = [
+import { ScreenProps } from "@/lib/types";
+import { Badge, Empty, SectionTitle } from "@/components/ui";
+import { title, shortDate } from "@/lib/api";
+export function Overview({ data, onCase }: ScreenProps) {
+  const m = data.metrics;
+  const stats = [
     {
-      label: "Active conversations",
-      value: data.conversations.length,
-      description: "Customers connected to your store",
-      icon: MessageCircle,
+      label: "Total cases",
+      value: m.total,
+      icon: Layers,
+      hint: "Every customer issue",
     },
     {
-      label: "Waiting for your approval",
-      value: data.metrics.pending,
-      description: "A human touch makes the difference",
+      label: "Resolved",
+      value: m.resolved,
+      icon: CheckCircle2,
+      hint: "Completed and communicated",
+    },
+    {
+      label: "Ongoing",
+      value: m.ongoing,
       icon: Clock3,
+      hint: "Moving toward a resolution",
     },
     {
-      label: "Requests completed",
-      value: data.metrics.completed,
-      description: "Confirmed actions, saved and tracked",
-      icon: ShieldCheck,
-    },
-    {
-      label: "Customer rating",
-      value: data.metrics.rating ? `${data.metrics.rating} / 5` : "—",
-      description: `From ${data.reviews.length} customer reviews`,
-      icon: Star,
+      label: "Flagged for review",
+      value: m.flagged,
+      icon: Flag,
+      hint: "Your decision is needed",
     },
   ];
+  const days: string[] = [];
+  const cursor = new Date(data.date_range.from + "T00:00:00Z");
+  const end = new Date(data.date_range.to + "T00:00:00Z");
+  while (cursor <= end) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  const stride = Math.max(1, Math.ceil(days.length / 14));
+  const bins = days
+    .filter((_, i) => i % stride === 0)
+    .map((day, index) => {
+      const selected = data.cases.filter((c) => {
+        const d = new Date(c.created_at).toLocaleDateString("en-CA", {
+          timeZone: "Asia/Kolkata",
+        });
+        return (
+          d >= day &&
+          d <= days[Math.min(days.length - 1, index * stride + stride - 1)]
+        );
+      });
+      return {
+        day,
+        resolved: selected.filter((c) => c.primary_status === "resolved")
+          .length,
+        ongoing: selected.filter((c) => c.primary_status === "ongoing").length,
+        flagged: selected.filter((c) => c.primary_status === "flagged").length,
+      };
+    });
+  const max = Math.max(
+    1,
+    ...bins.map((b) => b.resolved + b.ongoing + b.flagged),
+  );
+  const flagged = data.cases.filter((c) => c.primary_status === "flagged");
   return (
     <>
-      <div className="welcome">
-        <div>
-          <div className="eyebrow">
-            <span className="live-dot" /> YOUR CUSTOMER CARE, CONNECTED
-          </div>
-          <h2>
-            A little attention.
-            <br />
-            <span>A better customer experience.</span>
-          </h2>
-          <p>
-            Keep conversations moving, review what needs you,
-            <br className="desktop-break" /> and let RescueLoop take care of the
-            follow-through.
-          </p>
-          <Link className="button primary" href="/inbox">
-            Open your inbox <ArrowUpRight size={17} />
-          </Link>
-        </div>
-        <div className="loop-art" aria-hidden="true">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="orbit orbit-three" />
-          <div className="orbit-center">
-            <PackageCheck size={38} />
-          </div>
-          <div className="orbit-node node-one">
-            <MessageCircle size={21} />
-          </div>
-          <div className="orbit-node node-two">
-            <ShieldCheck size={21} />
-          </div>
-          <div className="orbit-note">
-            <span className="live-dot" /> Every request, in the loop
-          </div>
-        </div>
-      </div>
-      <div className="metrics">
-        {metrics.map(({ label, value, description, icon: Icon }) => (
-          <div className="metric" key={label}>
-            <div className="metric-top">
-              <span>{label}</span>
+      <section className="stats-grid" aria-label="Case statistics">
+        {stats.map(({ label, value, icon: Icon, hint }, i) => (
+          <article className={"stat-card stat-" + i} key={label}>
+            <div className="stat-label">
+              {label}
               <Icon size={18} />
             </div>
             <strong>{value}</strong>
-            <p>{description}</p>
-          </div>
+            <p>{hint}</p>
+          </article>
         ))}
-      </div>
+      </section>
       <div className="overview-grid">
-        <section className="panel">
+        <section className="panel chart-panel">
           <SectionTitle
-            title="Needs your attention"
-            subtitle="Your decisions keep things moving."
-            action={
-              <Link className="text-link" href="/approvals">
-                View all <ArrowUpRight size={15} />
-              </Link>
-            }
+            title="Case activity"
+            subtitle="Created in this period · current status"
+            action={<span className="subtle">IST</span>}
           />
-          {pending.length ? (
-            pending.slice(0, 3).map((c) => {
-              const order = data.orders.find((o) => o.id === c.order_id);
-              return (
-                <div className="request-row" key={c.id}>
-                  <div
-                    className={`request-icon ${c.kind === "refund" ? "orange" : ""}`}
-                  >
-                    <Sparkles size={20} />
+          <div
+            className="chart"
+            role="img"
+            aria-label={
+              m.total
+                ? m.resolved +
+                  " resolved, " +
+                  m.ongoing +
+                  " ongoing, " +
+                  m.flagged +
+                  " flagged cases"
+                : "No cases in this date range"
+            }
+          >
+            <div className="chart-lines">
+              {[max, Math.round(max / 2), 0].map((v, i) => (
+                <div key={i}>
+                  <span>{v}</span>
+                  <i />
+                </div>
+              ))}
+            </div>
+            <div className="chart-columns">
+              {bins.map((b, i) => (
+                <div
+                  className="chart-column"
+                  key={b.day}
+                  title={
+                    b.day +
+                    ": " +
+                    (b.resolved + b.ongoing + b.flagged) +
+                    " cases"
+                  }
+                >
+                  <div className="stack">
+                    <i
+                      className="flagged-fill"
+                      style={{ height: (b.flagged / max) * 100 + "%" }}
+                    />
+                    <i
+                      className="ongoing-fill"
+                      style={{ height: (b.ongoing / max) * 100 + "%" }}
+                    />
+                    <i
+                      className="resolved-fill"
+                      style={{ height: (b.resolved / max) * 100 + "%" }}
+                    />
                   </div>
-                  <div className="grow">
-                    <div className="row-title">
-                      {title(c.kind)} request{" "}
-                      <span className="mini-tag">{c.order_id}</span>
-                    </div>
-                    <p>{c.summary}</p>
+                  <span>
+                    {i % Math.max(1, Math.floor(bins.length / 6)) === 0
+                      ? new Date(b.day + "T12:00:00").toLocaleDateString(
+                          "en-IN",
+                          { day: "numeric", month: "short" },
+                        )
+                      : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="chart-legend">
+            <span>
+              <i className="resolved-fill" />
+              Resolved
+            </span>
+            <span>
+              <i className="ongoing-fill" />
+              Ongoing
+            </span>
+            <span>
+              <i className="flagged-fill" />
+              Flagged
+            </span>
+          </div>
+        </section>
+        <section className="panel resolution-panel">
+          <SectionTitle
+            title="Support at a glance"
+            subtitle="Measured from saved outcomes"
+          />
+          <div
+            className="donut"
+            style={{
+              background: m.total
+                ? "conic-gradient(#326954 0 " +
+                  (m.resolved / m.total) * 100 +
+                  "%, #dbb775 " +
+                  (m.resolved / m.total) * 100 +
+                  "% " +
+                  ((m.resolved + m.ongoing) / m.total) * 100 +
+                  "%, #cb8271 0)"
+                : "#e9ece6",
+            }}
+          >
+            <div>
+              <strong>
+                {m.resolution_rate === null ? "—" : m.resolution_rate + "%"}
+              </strong>
+              <span>resolution rate</span>
+            </div>
+          </div>
+          <div className="mini-metric">
+            <span>AI share of resolutions</span>
+            <strong>
+              {m.ai_share === null ? "Not enough data" : m.ai_share + "%"}
+            </strong>
+          </div>
+          <div className="mini-metric">
+            <span>Customer rating</span>
+            <strong>
+              {m.rating === null ? "No ratings" : m.rating + " / 5"}
+            </strong>
+          </div>
+          <Link href="/insights" className="text-link">
+            Explore insights <ArrowUpRight size={15} />
+          </Link>
+        </section>
+      </div>
+      <section className="panel">
+        <SectionTitle
+          title="Cases needing attention"
+          subtitle="The context is ready. Your decision keeps things moving."
+          action={
+            <Link className="text-link" href="/requests">
+              View requests <ArrowUpRight size={16} />
+            </Link>
+          }
+        />
+        {flagged.length ? (
+          <div className="attention-list">
+            {flagged.slice(0, 5).map((c) => {
+              const order = data.orders.find((o) => o.id === c.order_id);
+              const conv = data.conversations.find(
+                (v) => v.id === c.conversation_id,
+              );
+              return (
+                <button
+                  className="attention-row"
+                  key={c.id}
+                  onClick={() => onCase(c.id)}
+                >
+                  <span
+                    className={
+                      "request-icon " + (c.kind === "refund" ? "peach" : "sage")
+                    }
+                  >
+                    <Flag size={19} />
+                  </span>
+                  <div className="attention-copy">
+                    <strong>
+                      {c.order_id || "Customer request"}{" "}
+                      <span>— {title(c.kind)}</span>
+                    </strong>
+                    <p>{c.flag_reason}</p>
                     <small>
-                      {order?.customer_name} · Policy v{c.policy_version}
+                      {conv?.customer_name} ·{" "}
+                      {order?.product_name || "Store support"}
                     </small>
                   </div>
-                  <button className="button small" onClick={() => onReview(c)}>
-                    Review <ArrowRight size={15} />
-                  </button>
-                </div>
+                  <Badge value={c.primary_status} />
+                  <ArrowRight size={18} />
+                </button>
               );
-            })
-          ) : (
-            <Empty
-              title="You're all caught up"
-              text="New requests that need your decision will appear here."
-            />
-          )}
-          <div className="panel-foot">
-            <ShieldCheck size={15} /> Sensitive actions always follow your
-            published policies.
+            })}
           </div>
-        </section>
-        <section className="panel insight-panel">
-          <div className="eyebrow">
-            <Sparkles size={15} /> STORE INSIGHTS
-          </div>
-          <h3>
-            Listen. Learn.
-            <br />
-            Make the next order better.
-          </h3>
-          {data.insights.slice(0, 2).map((i) => (
-            <div className="insight-mini" key={i.title}>
-              <span>{i.count}</span>
-              <div>
-                <strong>{i.title}</strong>
-                <p>{i.description}</p>
-              </div>
-            </div>
-          ))}
-          <Link className="text-link" href="/insights">
-            Explore your insights <ArrowUpRight size={15} />
-          </Link>
-        </section>
-      </div>
-      <div className="overview-grid">
-        <section className="panel">
-          <SectionTitle
-            title="Recent orders"
-            subtitle="The latest from your store."
-            action={
-              <Link className="text-link" href="/orders">
-                All orders <ArrowUpRight size={15} />
-              </Link>
-            }
+        ) : (
+          <Empty
+            title="All caught up"
+            text="Cases requiring your decision will appear here."
           />
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product / order</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>
-                      <div className="product-cell">
-                        <ProductArt kind={o.product_id} />
-                        <div>
-                          <strong>{o.product_name}</strong>
-                          <small>{o.id}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{o.customer_name}</td>
-                    <td className="numeric">{money(o.total_paise)}</td>
-                    <td>
-                      <Badge value={o.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <section className="panel">
-          <SectionTitle
-            title="Activity, at a glance"
-            subtitle="A clear record of every action."
-          />
-          <div className="timeline">
-            {data.audit_logs.slice(0, 4).map((log) => (
-              <div className="timeline-item" key={log.id}>
-                <span>
-                  <CircleCheck size={15} />
-                </span>
-                <div>
-                  <strong>{title(log.action.replaceAll(".", " "))}</strong>
-                  <p>
-                    {log.actor} · {shortDate(log.created_at)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Link className="text-link panel-link" href="/activity">
-            View action log <ArrowUpRight size={15} />
-          </Link>
-        </section>
+        )}
+      </section>
+      <div className="overview-footnote">
+        <Check size={14} /> Statistics come from saved support cases. Demo
+        business records are synthetic.
       </div>
     </>
   );

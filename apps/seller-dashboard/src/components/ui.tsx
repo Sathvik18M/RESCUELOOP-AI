@@ -1,28 +1,22 @@
 "use client";
 import { useEffect, useRef } from "react";
-import {
-  X,
-  ArrowUpRight,
-  CheckCircle2,
-  CircleDashed,
-  Headphones,
-  Wallet,
-} from "lucide-react";
+import { X, CircleDashed } from "lucide-react";
 import { title } from "@/lib/api";
-
 export function Badge({ value }: { value: string }) {
   const color =
-    /completed|delivered|collected|approved|published|ready|succeeded/.test(
+    /resolved|completed|delivered|collected|published|succeeded|available/.test(
       value,
-    )
+    ) && !/unavailable/.test(value)
       ? "green"
-      : /pending|draft|reserved|queued|needs/.test(value)
-        ? "amber"
-        : /failed|rejected|declined|cancelled|expired|uncertain/.test(value)
-          ? "red"
+      : /flagged|failed|uncertain|unavailable/.test(value)
+        ? "red"
+        : /ongoing|pending|waiting|draft|reserved|verification|delayed/.test(
+              value,
+            )
+          ? "amber"
           : "gray";
   return (
-    <span className={`badge ${color}`}>
+    <span className={"badge " + color}>
       <i />
       {title(value)}
     </span>
@@ -37,29 +31,9 @@ export function Empty({
 }) {
   return (
     <div className="empty">
-      <CircleDashed size={32} />
+      <CircleDashed size={30} />
       <h3>{heading}</h3>
       <p>{text}</p>
-    </div>
-  );
-}
-export function ProductArt({
-  kind,
-  large = false,
-}: {
-  kind: string;
-  large?: boolean;
-}) {
-  return (
-    <div
-      className={`product-art ${kind.includes("HEAD") ? "headphone" : "wallet"} ${large ? "large" : ""}`}
-    >
-      {kind.includes("HEAD") ? (
-        <Headphones size={large ? 88 : 26} strokeWidth={1.25} />
-      ) : (
-        <Wallet size={large ? 88 : 26} strokeWidth={1.25} />
-      )}
-      <span />
     </div>
   );
 }
@@ -67,31 +41,34 @@ export function Modal({
   title: heading,
   onClose,
   children,
+  drawer = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  drawer?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
     const el = ref.current;
+    el?.showModal();
     return () => el?.close();
   }, []);
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={drawer ? "case-drawer" : "modal"}
+      aria-label={heading}
       onCancel={onClose}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <header>
+      <header className="dialog-heading">
         <h2>{heading}</h2>
         <button
           className="icon-button"
-          aria-label="Close dialog"
+          aria-label="Close case"
           onClick={onClose}
         >
           <X size={20} />
@@ -120,25 +97,22 @@ export function SectionTitle({
     </div>
   );
 }
-export function Success({ children }: { children: React.ReactNode }) {
+export function Brand() {
   return (
-    <div className="notice">
-      <CheckCircle2 size={17} />
-      {children}
+    <div className="brand">
+      <span className="brand-symbol">
+        <i />
+        <i />
+      </span>
+      <span>
+        rescueloop<span className="brand-ai">AI</span>
+      </span>
     </div>
   );
 }
-export function TextLink({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button className="text-link" onClick={onClick}>
-      {children}
-      <ArrowUpRight size={15} />
-    </button>
-  );
-}
+export const caseLabel = (id: string) =>
+  id.startsWith("CASE")
+    ? id.replace("CASE", "#")
+    : id.startsWith("HIST")
+      ? "#" + id
+      : "#" + id.slice(0, 6).toUpperCase();

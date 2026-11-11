@@ -29,12 +29,16 @@ jobs:
       - run: npm ci
       - run: uv sync --frozen --python 3.12
         working-directory: services/backend
+      - run: uv run alembic upgrade head
+        working-directory: services/backend
+        env:
+          DATABASE_URL: postgresql+psycopg://rescueloop:rescueloop@127.0.0.1:5432/rescueloop_test
       - run: uv run pytest -q
         working-directory: services/backend
         env:
           TEST_DATABASE_URL: postgresql+psycopg://rescueloop:rescueloop@127.0.0.1:5432/rescueloop_test
       - run: npm run build
-      - run: services/backend/.venv/bin/python scripts/export_contracts.py && npm run contracts && git diff --exit-code -- contracts/openapi.json apps/seller-dashboard/src/lib/api.generated.ts
+      - run: services/backend/.venv/bin/python scripts/export_contracts.py && npm run contracts && git diff --exit-code -- packages/contracts/openapi.json packages/contracts/api.generated.ts
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

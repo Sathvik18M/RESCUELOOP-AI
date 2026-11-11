@@ -19,3 +19,7 @@ test-results/
 *.log
 *.tsbuildinfo
 .DS_Store
+.next-rebuild/
+.next-conversation/
+.next-release/
+.vercel/

@@ -1,5 +1,5 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 export async function api<T>(
   path: string,
@@ -38,6 +38,7 @@ export const title = (value: string) =>
   value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 export const shortDate = (value: string) =>
   new Date(value).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     hour: "2-digit",

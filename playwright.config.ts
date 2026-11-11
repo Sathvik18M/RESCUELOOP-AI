@@ -26,7 +26,7 @@ export default defineConfig({
         process.platform === "win32"
           ? "services\\backend\\.venv\\Scripts\\python.exe scripts\\e2e_api.py"
           : "services/backend/.venv/bin/python scripts/e2e_api.py",
-      url: "http://127.0.0.1:8001/health",
+      url: "http://127.0.0.1:8002/health",
       reuseExistingServer: false,
       timeout: 60000,
     },
@@ -36,9 +36,9 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60000,
       env: {
-        NEXT_PUBLIC_API_URL: "http://127.0.0.1:8001",
+        NEXT_PUBLIC_API_URL: "http://127.0.0.1:8002",
         NEXT_PUBLIC_DEMO_MODE: "true",
-        E2E: "true",
+        NEXT_DIST_DIR: ".next-e2e",
       },
     },
   ],

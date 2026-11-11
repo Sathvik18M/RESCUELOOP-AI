@@ -1,8 +1,8 @@
 from alembic import context
 from sqlalchemy import create_engine, pool
 from app.core.config import get_settings
-from app.db.session import Base
-from app.db import models  # noqa: F401
+from app.persistence.session import Base
+from app.persistence import models  # noqa: F401
 
 if context.is_offline_mode():
     context.configure(url=get_settings().database_url, target_metadata=Base.metadata, literal_binds=True)

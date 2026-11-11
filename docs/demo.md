@@ -1,39 +1,59 @@
-# Four demo journeys
+# Seller dashboard walkthrough
 
-Open the dashboard and select **Enter demo workspace**. The normal seed is idempotent and does not reset prior decisions. Browser tests use a separate database when a fresh demonstration is needed.
+Open [the local seller portal](http://127.0.0.1:3100). Local verification uses synthetic conversations. Live customers use their own WhatsApp application; there is no customer simulator in the portal.
 
-## 1. Wallet customization
+## Starting state
 
-1. Open **Requests & approvals** and review the existing `CASE1043` request.
-2. Quote ₹199 for engraving. Gift wrapping is already configured at ₹149.
-3. Approve. Verify that `ORD1043` still totals ₹799 until the customer confirms.
-4. Open **WhatsApp inbox**, select **Ananya Rao**, and send `CONFIRM CASE1043` as **Demo customer**.
-5. The order subtotal becomes ₹1,147. Review the recorded action in **Action log**.
+A fresh seed has 12 cases: 6 resolved, 4 ongoing, 2 flagged. The chart and metrics are calculated from saved records. The date filter uses case creation dates in Asia/Kolkata.
 
-## 2. Store pickup
+| Conversation | Customer | Order | Initial purpose |
+| --- | --- | --- | --- |
+| CONV001 | Aarav Sharma | ORD1042, headphones ₹1,999 | Above-limit refund, photo review |
+| CONV002 | Ananya Rao | ORD1043, wallet ₹799 | Engraving and birthday wrap |
+| CONV003 | Riya Mehta | ORD1044, cable ₹199 | Return awaiting inspection |
 
-1. In Ananya's conversation, send `Can I collect the wallet tomorrow afternoon?`.
-2. Approve the pickup request in **Requests & approvals**.
-3. Back in the inbox, use **Prepare confirmation**, or copy the specific `CONFIRM <request-id>` command from the reply.
-4. Confirm. Stock decreases once, one pickup slot is reserved, and a six-digit collection code is sent.
-5. Open **Store pickup**, select **Mark ready**, then **Verify collection** with the customer's code.
-6. The order is delivered and the demo collection payment is recorded. A feedback request appears in the conversation.
+The browser walkthrough performed during the rebuild leaves completed examples saved. At its end, there are 13 cases: 9 resolved, 3 ongoing, 1 flagged. There is an unpublished example policy draft and a generated report. Published demo rules remain version 1.
 
-## 3. Failed-delivery recovery
+## Customization and pickup
 
-1. Select **Aarav Sharma** in the inbox.
-2. Send `Redelivery please. Address: 12 Demo Road, Bengaluru`.
-3. Send the returned `CONFIRM <request-id>` command.
-4. `ORD1042` changes from `failed_attempt` to `redelivery_scheduled` and an audit record is created.
+1. Open the wallet customization from Overview or Requests. Review the ₹199 engraving, ₹149 wrap, one-day preparation and ₹1,147 proposed total.
+2. Approve the proposal. The case becomes pending customer; the order remains ₹799 and unpaid.
+3. In local verification, send `CONFIRM Rxxxxxx` using the actual short reference shown in the case:
+   `scripts/demo-message.ps1 -Conversation CONV002 -Text 'CONFIRM Rxxxxxx'`.
+4. The saved total becomes ₹1,147. Payment remains zero. Duplicate confirmation cannot repeat the charge.
+5. Send `Can I collect the wallet tomorrow afternoon?` through the same CLI fixture or real WhatsApp after live setup.
+6. Approve the dated pickup window, then confirm its new reference. Stock moves 18 physical / 0 reserved / 18 available to 18 / 1 / 17.
+7. Mark ready, enter the customer's six-digit code and complete handover. The demo records ₹1,147 simulated payment, stock becomes 17 / 0 / 17, slot capacity is released and the case resolves after its follow-up. Cancellation instead releases both holds.
 
-## 4. Photo complaint and refund
+## Return and refund
 
-1. Open **Demo studio** and choose **Photo complaint & refund**. This moves `ORD1042` into the delivered scenario, inside its return window.
-2. In Aarav's inbox, attach a JPEG, PNG, or WebP image. The image appears in **Evidence gallery**.
-3. In demo AI mode, the assessment explicitly says visual analysis was not run. With configured OpenAI credentials it calls the vision adapter.
-4. Send `I want a refund`.
-5. The ₹1,999 amount exceeds the ₹250 cumulative automatic-refund cap, so it waits for seller approval.
-6. Approve under **Returns & refunds**, then send `CONFIRM <request-id>` as the customer.
-7. A simulated refund record is persisted. A repeat confirmation does not create another refund.
+1. In Requests, open HIST009 for the returned cable.
+2. Record an accepted inspection with a note. Leave restock unchecked for defective stock.
+3. A ₹199 simulated refund proposal appears under the ₹250 limit. Approval, receipt and refund execution remain separate.
+4. Confirm the new reference through CONV003. The worker executes the simulated refund and saves its follow-up.
+5. The order's refunded amount becomes ₹199; no real money moves. A real WhatsApp case resolves only after delivered/read acknowledgment.
 
-The image at `data/demo/assets/test-evidence.png` is a synthetic browser-test fixture, not evidence of actual product damage.
+## Private photo review
+
+The seeded headphone case exceeds the automatic refund limit. Upload the synthetic fixture through the authenticated fixture API or send a real photo after connecting WhatsApp. The local mode explicitly does not perform visual analysis.
+
+The case drawer shows private evidence and why manual verification is required. Approval is rejected until required evidence is verified. The seller must record an accepted return inspection or an explicit waiver with a reason before a direct refund proposal. The customer still must confirm.
+
+## Handoff, policies and insights
+
+- Inbox: Take over enables a store-team reply and pauses AI. Resume AI is explicit. Operational stages and unsuccessful-solution counts survive handoff.
+- Two distinct failed solutions escalate with complete history. A repeated complaint about the same solution counts once.
+- Policies: edit structured fields or ask for a draft. Review the diff before publication. The example ten-day draft is deliberately unpublished; the seven-day rule stays active.
+- Insights: generate a range-bound report. Each recommendation links to source cases; three distinct cases are required for a recurring theme. Creating a draft from a recommendation cannot publish it.
+- A post-resolution `4 stars` message stores one active rating. A later correction updates the same rating and appends an audit event.
+
+## Screenshots
+
+- [Fresh-seed overview](screenshots/overview-desktop.png)
+- [Customization consent](screenshots/customization-flow.png)
+- [Completed pickup](screenshots/pickup-complete.png)
+- [Completed simulated refund](screenshots/refund-complete.png)
+- [Unpublished policy review](screenshots/policy-draft.png)
+- [Mobile overview](screenshots/overview-mobile.png)
+
+To restore the starting distribution, use the explicit stop/reset/seed procedure in the README. Seeding alone never erases the walkthrough.

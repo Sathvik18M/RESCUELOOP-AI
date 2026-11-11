@@ -1,75 +1,49 @@
-# Deploy from the repository root using this Blueprint file.
-# Replace sync:false values through Render's secret settings before startup.
+# Free demo backend. Dashboard: Vercel Hobby. Database: existing Supabase.
+# The API and worker share this instance; both sleep when Render spins down.
+# No paid worker, paid database, disk, or upgrade is requested by this Blueprint.
 services:
   - type: web
     name: rescueloop-api
     runtime: docker
+    plan: free
+    branch: main
     dockerfilePath: ./infra/Dockerfile.backend
     dockerContext: .
+    dockerCommand: python -m app.hosted
     healthCheckPath: /health
+    autoDeployTrigger: off
     envVars:
       - key: APP_ENV
-        value: production
+        value: staging
       - key: DEMO_MODE
         value: "false"
       - key: AI_MODE
-        value: openai
+        value: groq
       - key: DATABASE_URL
         sync: false
-      - key: OPENAI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: GROQ_VISION_MODEL
+        value: qwen/qwen3.8-27b
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: WHATSAPP_ACCESS_TOKEN
+      - key: SUPABASE_STORAGE_BUCKET
+        value: evidence
+      - key: WHATSAPP_PROVIDER
+        value: 360dialog_sandbox
+      - key: WHATSAPP_MERCHANT_ID
+        value: SELLER001
+      - key: D360_API_KEY
         sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
+      - key: D360_SANDBOX_RECIPIENT
         sync: false
-      - key: WHATSAPP_APP_SECRET
+      - key: D360_RECIPIENT_TYPE
         sync: false
-      - key: WHATSAPP_VERIFY_TOKEN
-        sync: false
-      - key: WHATSAPP_GRAPH_VERSION
-        sync: false
-      - key: WHATSAPP_UPDATE_TEMPLATE
+      - key: D360_WEBHOOK_SECRET
         sync: false
       - key: CORS_ORIGINS
-        sync: false
-  - type: worker
-    name: rescueloop-worker
-    runtime: docker
-    dockerfilePath: ./infra/Dockerfile.backend
-    dockerContext: .
-    dockerCommand: python -m app.jobs.worker
-    envVars:
-      - key: APP_ENV
-        value: production
-      - key: DEMO_MODE
-        value: "false"
-      - key: AI_MODE
-        value: openai
-      - key: DATABASE_URL
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_MODEL
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: WHATSAPP_ACCESS_TOKEN
-        sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
-        sync: false
-      - key: WHATSAPP_APP_SECRET
-        sync: false
-      - key: WHATSAPP_VERIFY_TOKEN
-        sync: false
-      - key: WHATSAPP_GRAPH_VERSION
-        sync: false
-      - key: WHATSAPP_UPDATE_TEMPLATE
         sync: false

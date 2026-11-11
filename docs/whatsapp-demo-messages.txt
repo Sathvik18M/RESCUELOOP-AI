@@ -1,0 +1,380 @@
+RESCUELOOP AI - WHATSAPP DEMO MESSAGES
+Prepared: 12 November 2026
+
+Copy only the text after SEND into WhatsApp.
+EXPECTED describes the intended behavior, not an exact guaranteed sentence.
+Wait for each reply before sending the next message in a scenario.
+
+BEFORE THE DEMO
+--------------
+WhatsApp demo number: +55 11 4673 3492
+Seller dashboard: http://127.0.0.1:3100
+
+The last verified Sandbox key had exhausted its outbound quota. Replies cannot
+be demonstrated until a key with available quota and its webhook are verified.
+Changing a key does not require rebuilding the app. This file does not change it.
+
+Use the registered testing phone. Its approved demo identity is linked to
+ORD1042 (wireless headphones). ORD1043 and ORD1044 belong to other customers;
+do not use them to demonstrate successful actions from this phone.
+
+Check that AI is resumed before an AI scenario. A seller handoff pauses replies.
+The examples below are alternative demo scenarios, not one customer's factual
+story. Do not send every complaint in sequence on the same conversation.
+Messages can create real saved demo cases and consume the available reply quota.
+Do not reset history, failed-solution counters or audit logs between examples.
+
+CURRENT ORDER DATA NOTE
+-----------------------
+The active store record for ORD1042 says DELIVERED. The older demo database says
+FAILED_ATTEMPT. These are conflicting seeded records, not verified evidence that
+a courier completed delivery. No courier proof or delivery location is currently
+stored. The bot should explain the uncertainty and surface it for seller review.
+
+
+PART 1 - SHORT MAIN DEMO
+========================
+
+1. Greeting
+SEND: Hi
+EXPECTED: A greeting; no unrelated request is treated as answered.
+
+2. Public policy question
+SEND: What is your return policy?
+EXPECTED: The published seven-day policy for damaged, defective or incorrect
+items, with inspection and the store's approval rules explained.
+
+3. Ordinary order status
+SEND: What is the status of order ORD1042?
+EXPECTED: An ownership-checked order lookup. It must distinguish the recorded
+status from verified receipt. The known source conflict can require review, but
+the bot must not invent a customer complaint about this neutral question.
+
+4. Wrong-item complaint with every required description already supplied
+SEND: I ordered wireless headphones under order ORD1042, but I received a Bluetooth speaker instead. I want a replacement.
+EXPECTED: Acknowledge ORD1042, headphones ordered, speaker received and the
+replacement request. Check the order and policy; create or reuse the wrong-item
+verification case. Explain PENDING_VERIFICATION and the next review step.
+Do not ask again what was ordered or received. Do not claim replacement shipped.
+SHOW: The case in Requests/Inbox, collected facts, conflicting evidence and audit.
+
+5. Duplicate complaint check - optional
+SEND: I ordered wireless headphones under order ORD1042, but I received a Bluetooth speaker instead. I want a replacement.
+EXPECTED: Reuse the existing wrong-item case. No duplicate operation or additional
+failed-resolution count simply because the same complaint was sent again.
+
+6. Follow-up using the established context
+SEND: What happens next with my replacement request for ORD1042?
+EXPECTED: Identify the relevant replacement verification case, explain its actual
+status and next step, and reuse the product details already collected.
+
+
+PART 2 - DELIVERY DISPUTE DEMO (A SEPARATE SCENARIO)
+==================================================
+
+1. Customer disputes receipt
+SEND: Tracking says order ORD1042 was delivered, but I have not received it.
+EXPECTED: Create or reuse a DELIVERY_DISPUTE case. Record the customer's claim
+alongside the store status and source conflict. Flag the case for seller review;
+do not merely repeat DELIVERED as if that resolves the complaint.
+
+2. Clear follow-up
+SEND: Where exactly was it delivered? Can you show proof of delivery?
+EXPECTED: Use the active order and delivery case. Explain that no verified
+delivery location or proof is available in the connected records. Request seller
+verification without inventing a location, signature, date or courier response.
+
+3. Case status follow-up
+SEND: What is happening with my delivery dispute for ORD1042?
+EXPECTED: Identify that dispute and report its actual review status and next step.
+SHOW: Customer claim, verified facts, conflicts, suggested action, full history
+and audit events in the seller dashboard.
+
+
+PART 3 - CUSTOMIZATION PREREQUISITE DEMO
+=======================================
+
+This demonstrates an eligibility check using the current order, not successful
+wallet engraving. ORD1042 is an existing delivered headphone order.
+
+SEND: Can you add gift wrapping to order ORD1042?
+EXPECTED: Check the order stage, published policy and product options first.
+Explain the failed prerequisite or need for seller review. Do not create an
+actionable customization proposal and then announce a draft-order error.
+Do not claim the order changed.
+
+For a SUCCESSFUL customization demo, first prepare a separate eligible draft
+order, owned by the testing customer, for a product that allows customization.
+Only after that setup, replace the bracketed text below with actual values:
+
+SEND: Please engrave "Aarav" on the wallet in order [eligible draft order ID].
+EXPECTED: Preserve the supplied engraving text, check product rules, and obtain
+seller approval of any proposed price and preparation time.
+
+After the seller approves and the actual confirmation reference arrives:
+SEND: CONFIRM [actual request reference]
+EXAMPLE FORMAT ONLY: CONFIRM Rxxxxxx
+EXPECTED: Execute only the approved, eligible operation after valid consent.
+Never send the placeholder or invent a confirmation reference.
+
+
+PART 4 - HUMAN HANDOFF AND RESUME AI
+===================================
+
+1. Customer asks for a human
+SEND: I want to speak directly with the seller.
+EXPECTED: A transfer acknowledgement; automated replies pause.
+SHOW: The handoff and complete conversation in the seller Inbox.
+
+2. Customer sends a message during handoff
+SEND: Please ask the store team to review my ORD1042 replacement request.
+EXPECTED: Message appears in the dashboard. No AI answer while handoff is active.
+
+3. Seller replies from the dashboard
+SELLER ACTION: Use Take over if required, then send this from the reply composer:
+This is the store team. I can see your ORD1042 replacement request and the details you already provided. We are reviewing the order and delivery records.
+EXPECTED: A seller-authored reply reaches WhatsApp if outbound delivery is working.
+This is a manual seller reply, not an AI-generated answer.
+
+4. Resume AI
+SELLER ACTION: Click Resume AI on this conversation.
+SEND: What is your return policy now?
+EXPECTED: A fresh policy answer, with earlier handoff messages, case counters and
+audit records preserved. Verify Groq provenance and actual delivery in the logs;
+a queued message alone does not prove that the customer received it.
+
+
+PART 5 - TWO-ATTEMPT ESCALATION (PREPARED CASE REQUIRED)
+======================================================
+
+Use a separate eligible support case that starts with zero failed resolutions.
+The earlier tested policy case already has two failed attempts. Do not reset it
+or assume that a new wording automatically creates a fresh case.
+
+1. Obtain a successfully delivered solution for the prepared case.
+Example initial question, if the prepared case is a policy case:
+SEND: Please explain when a damaged item can be returned and refunded.
+
+2. After solution 1 arrives:
+SEND: That did not solve my return-policy question.
+EXPECTED: First failed solution recorded; case reopens. No premature handoff.
+
+3. Request another solution and wait for its reply:
+SEND: Please explain the return policy again, especially when refunds are allowed.
+EXPECTED: A second distinct solution linked to the same case.
+
+4. Only after solution 2 arrives:
+SEND: That still did not solve my return-policy question.
+EXPECTED: Two distinct failed solutions trigger seller escalation and pause AI.
+
+5. Check the pause:
+SEND: Are you still there? Please explain the return policy.
+EXPECTED: Incoming message is saved and visible to the seller; no AI reply.
+SHOW: The two-attempt counter, two linked solutions, handoff, full history and audit.
+
+
+PART 6 - MULTIPLE REQUESTS IN ONE MESSAGE
+========================================
+
+Run while AI is active:
+SEND: What is the status of order ORD1042? Also, what is your return policy?
+EXPECTED: Recognize both requests, retrieve the owned order and explain the
+published policy. Do not confuse a status inquiry with a nonreceipt claim.
+
+When multiple cases really could match a vague follow-up, the bot should ask a
+specific clarification naming the relevant requests. To select the intended one:
+SEND: I mean the wrong-item replacement request for ORD1042.
+EXPECTED: Continue that case using its saved facts.
+
+
+PART 7 - ALL 35 CUSTOMER ISSUE MESSAGES
+======================================
+
+Use these as independent issue examples. Expected responses are safe next steps,
+not promises of an automated payment, courier booking or invoice integration.
+Missing information should be requested only if absent from the relevant history.
+Use real demo references/details when asked; never invent successful transactions.
+
+01. Order not confirmed
+SEND: I paid, but my order isn't confirmed.
+EXPECTED: Ask for the missing order/payment reference and route reconciliation.
+
+02. Wrong order details
+SEND: My order has the wrong product.
+EXPECTED: Collect only missing order and intended-versus-recorded product details;
+verify the order before proposing any correction.
+
+03. Order cancellation
+SEND: I want to cancel my order.
+EXPECTED: Verify ownership, fulfillment stage and cancellation eligibility.
+ORD1042's delivered record cannot be treated as an eligible draft cancellation.
+
+04. Order modification
+SEND: Can I change the size after ordering?
+EXPECTED: Collect missing order/current/requested size; check product and stage.
+
+05. Duplicate order
+SEND: I accidentally ordered the same item twice.
+EXPECTED: Request the two references and which to keep; verify before any action.
+
+06. Delayed delivery
+SEND: My order hasn't arrived yet.
+EXPECTED: Use the relevant order or ask for its reference. Investigate nonreceipt;
+do not invent a delivery date or treat DELIVERED as proof of receipt.
+
+07. Failed delivery
+SEND: The delivery person couldn't find my address.
+EXPECTED: Verify shipment events and collect missing delivery details; do not
+claim another delivery attempt was arranged without a confirmed operation.
+
+08. Wrong delivery address
+SEND: I entered the wrong address.
+EXPECTED: Collect the correction and check whether the shipment can be changed.
+
+09. Missing package
+SEND: Tracking says delivered, but I haven't received it.
+EXPECTED: Create or reuse a delivery dispute; check available proof and escalate.
+
+10. Reschedule delivery
+SEND: Can you deliver tomorrow instead?
+EXPECTED: Verify order and availability; do not promise an unconfirmed date.
+
+11. Store pickup request
+SEND: Can I collect my order from your shop?
+EXPECTED: Check order eligibility and collect a preferred window. Seller approval
+and customer confirmation are required before a pickup is confirmed.
+
+12. Incorrect delivery status
+SEND: The tracking information is wrong.
+EXPECTED: Identify the disputed update, compare records and request verification.
+
+13. Damaged product
+SEND: My headphones arrived broken.
+EXPECTED: Collect missing order/damage details and check evidence and policy.
+
+14. Defective product
+SEND: The device isn't working.
+EXPECTED: Collect missing product/fault details; check eligibility and evidence.
+
+15. Wrong product received - complete example for the registered demo customer
+SEND: I ordered wireless headphones under order ORD1042, but I received a Bluetooth speaker instead. I want a replacement.
+EXPECTED: Preserve all supplied details and reuse a verification case. No repeat
+question asking what was ordered or received; no unsupported replacement promise.
+
+16. Missing items
+SEND: One item is missing from my package.
+EXPECTED: Collect missing item/quantity details and request order/packing review.
+
+17. Poor product quality
+SEND: The material quality is bad.
+EXPECTED: Collect the specific problem and compare evidence with the policy.
+
+18. Product not as described
+SEND: The product doesn't match the website photos.
+EXPECTED: Collect the specific differences and route listing/evidence review.
+
+19. Return request
+SEND: I want to return this product.
+EXPECTED: Check order, reason, evidence and return window before proposing terms.
+
+20. Refund request
+SEND: I want my money back.
+EXPECTED: Check payment, reason, eligibility, inspection and approval requirements;
+do not claim a refund was issued merely because it was requested.
+
+21. Refund delayed
+SEND: My refund hasn't arrived.
+EXPECTED: Check the saved refund/reference; do not invent a payment or timeframe.
+
+22. Refund amount incorrect
+SEND: I received only Rs 500 instead of Rs 800.
+EXPECTED: Preserve both amounts, request any missing reference and flag reconciliation.
+
+23. Replacement request
+SEND: Can you replace my damaged headphones from order ORD1042?
+EXPECTED: Preserve the order/product/remedy; collect missing damage evidence and
+check replacement policy. Replacement still requires the applicable approvals.
+
+24. Return pickup problem
+SEND: Nobody came to collect my return.
+EXPECTED: Check return/order reference and scheduled date; route collection review.
+
+25. Payment deducted, order missing
+SEND: Money was deducted, but no order was created.
+EXPECTED: Collect payment reference, date and amount for seller reconciliation.
+
+26. Double payment
+SEND: I was charged twice.
+EXPECTED: Collect missing payment references/amounts and verify the duplicate charge.
+
+27. Incorrect charges
+SEND: Why was I charged an extra Rs 200?
+EXPECTED: Preserve the disputed amount and compare billing records with the order.
+
+28. Invoice issue
+SEND: I need a GST invoice.
+EXPECTED: Collect missing billing details and route invoice review; do not claim an
+invoice was issued without an actual confirmed document or backend result.
+
+29. Customization request
+SEND: Can you engrave my name on this wallet?
+EXPECTED: Establish the relevant product/order and exact text, then check draft
+stage and product rules before creating an actionable customization request.
+The current registered customer has no verified eligible wallet draft order.
+
+30. Incorrect customization
+SEND: You printed the wrong name on my gift.
+EXPECTED: Collect missing requested-versus-received text and verify agreed terms.
+
+31. Missing customization
+SEND: I paid for gift wrapping, but it wasn't included.
+EXPECTED: Check agreed customization and payment records; flag the missing service.
+
+32. Custom order delay
+SEND: My personalized order isn't ready.
+EXPECTED: Check preparation terms and recorded progress; no invented ready date.
+
+33. Warranty claim
+SEND: My product stopped working during warranty.
+EXPECTED: Check purchase, reported fault, coverage and evidence before a remedy.
+
+34. Unsatisfactory support
+SEND: Your previous solution didn't fix my problem.
+EXPECTED: Link to the relevant completed solution. Count each distinct failed
+solution once; repeating the same complaint does not create another attempt.
+
+35. Human assistance
+SEND: I want to speak directly with the seller.
+EXPECTED: Transfer to the seller and pause automated replies until Resume AI.
+
+
+PART 8 - PHOTO AND FEEDBACK EXAMPLES
+====================================
+
+Photo evidence:
+Attach a product photo and send a text description with it.
+SEND: This photo relates to my ORD1042 wrong-item complaint. I ordered wireless headphones and received a Bluetooth speaker.
+EXPECTED: Preserve the complaint context. This 360dialog Sandbox cannot retrieve
+the photo bytes for AI vision analysis; explain that limitation and request seller
+review or the needed text description. Do not claim the AI inspected the image.
+
+Feedback, only after an eligible case has been resolved:
+SEND: 4 stars
+EXPECTED: Store feedback for the relevant resolved case.
+To correct that rating:
+SEND: 5 stars
+EXPECTED: Update the existing rating and append an audit event, not duplicate it.
+
+
+WHAT TO SHOW THE DEMO AUDIENCE
+==============================
+
+Customer: Actual incoming WhatsApp message and the reply received on the phone.
+Seller: Correct case, collected facts, verified order data, review reason and next step.
+History: Prior conversation survives follow-ups, duplicate messages and handoff.
+Audit: Order/policy/tool reads, case updates, seller decisions and escalation.
+Actions: A proposal is not execution; approval, consent and backend success remain
+separate. Do not report a refund, order change or delivery as completed without proof.
+
+The examples are a demo script, not a claim that all 35 flows have passed live
+WhatsApp testing. Automated test results and actual delivery evidence are separate.

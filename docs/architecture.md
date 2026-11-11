@@ -1,58 +1,51 @@
-# Architecture
+# Architecture and invariants
 
-## Request path
+The [approved baseline](decisions/approved-baseline.md) governs the implementation. PostgreSQL is the business source of truth. Model output is a proposal, never authorization.
 
-```mermaid
-flowchart LR
-    WA[Customer WhatsApp] --> WH[Verified webhook]
-    WH --> Q[PostgreSQL jobs]
-    Q --> W[Python worker]
-    W --> G[LangGraph / OpenAI specialists]
-    G --> B[Business rules]
-    UI[Next.js seller dashboard] --> API[FastAPI + store authorization]
-    API --> B
-    B --> DB[(PostgreSQL)]
-    B --> A[Saved approval cases]
-    A --> UI
-    B --> O[Outgoing message jobs]
-    O --> WA
-    B --> S[Private image storage]
-```
+## Message and action flow
 
-The demo inbox calls the same conversation/business services through a development-only route. It does not send WhatsApp messages. Data shown in the dashboard is retrieved from FastAPI; the browser does not write business tables directly.
+1. The selected provider's webhook authenticates and persists incoming messages before queuing existing agent jobs. Twilio uses its signed form request, external origin, account and recipient checks. The optional 360dialog Sandbox uses a private random URL token (its documented Sandbox configuration does not expose a signature option), fixed-tester checks, bounded JSON payloads and provider message deduplication. Disabled providers reject inbound requests.
+2. A leased database job serializes incoming messages per conversation. Earlier unprocessed messages block later ones. An unknown phone has no access to seeded orders until an owner explicitly links it.
+3. LangGraph coordinates intent extraction. Support and Shopping refine against current authorized records; Photo assesses clarity; Insights cites cases. A case receives its own policy, history, evidence, counters and proposal. Older context is source-linked and cannot establish consent.
+4. The domain layer checks ownership, published rules, evidence, balances, stock, slots and permissions. Seller approval and customer consent remain separate. A short reference identifies one revision and exact terms; stale terms require a fresh proposal.
+5. A transaction reserves inventory/capacity or refundable balance. Effects have stable operation IDs. The simulated provider records its result. Outbound notification is a separate job.
+6. Only delivered/read receipts resolve real WhatsApp cases requiring communication. Synthetic fixtures are explicitly marked `demo_delivered`. Provider acceptance alone does not count as delivery.
 
-## Responsibilities
+The API and worker serialize initial checkpoint migrations with a PostgreSQL advisory lock. LangGraph tables stay in the private `rescueloop_agents` schema.
 
-- HTTP routes authenticate the actor, validate input, and delegate to domain services.
-- Conversation routing proposes an intent using an OpenAI function schema. Shopping and Resolution specialists refine extracted details in live AI mode.
-- Policy AI returns a draft. Only an owner can publish a version.
-- Vision AI describes observable evidence with uncertainty. Its output cannot authorize actions.
-- Insights AI summarizes source reviews and requests through an explicit analysis endpoint. Dashboard counts remain deterministic.
-- Commerce services own eligibility, final price calculation, required approvals, inventory, and financial caps.
-- PostgreSQL records are the source of truth. LangGraph checkpoints preserve individual agent runs; persistent `cases` implement approval waits across restarts.
+## State and counters
 
-## Case states
+Primary case states are mutually exclusive: ongoing, flagged, resolved. Operational stages (waiting for consent, return receipt, refund execution, pickup ready, notification) are independent. Seller takeover flags active cases without discarding their operational stage. AI is paused until explicit resumption.
 
-`pending_seller -> pending_customer -> completed`
+Two distinct unsuccessful solutions trigger escalation. Repeating the same complaint about one solution does not count twice. Technical failures use three total safe attempts, delayed 5 seconds and 15 seconds or a longer provider Retry-After. Neither technical retries nor clarification requests increment the resolution counter.
 
-Alternative transitions: `needs_details -> pending_seller`, `rejected`, `declined`, and `expired`. Cases expire after 24 hours. Jobs persist expiration work. Seller approval is separate from customer acceptance. Customer confirmations carry a specific case ID and are checked against the original conversation.
+Technical errors are recorded without secrets. Ambiguous outbound sends are held for verification, not resent automatically. Known provider IDs can be reconciled through the case conversation: Twilio supports status lookup; 360dialog Sandbox uses persisted webhook receipts. Unknown IDs require provider-side verification. Business operations remain committed independently of notification failures. Late receipts can complete the exact pending outcome, but cannot close a subsequently reopened issue.
 
-Before executing, the backend rechecks the policy version, order status, inventory, capacity, previously refunded amount, and remaining paid balance. Money is stored as integer paise. Tax calculations use integer rounding. Row locks serialize concurrent access to stock, orders, reservations, and cases. Execution and audit events commit in the same transaction.
+Conversations persist their messaging provider and recipient separately from customer identity. Switching providers never reroutes existing conversations. BSUID-only Sandbox testers have no inferred phone number or order access. Delivery receipts are saved before an outbound ID is necessarily known and applied after send association, closing the early-callback race. The Sandbox's quota-exhausted response is a permanent failure; ambiguous transport failures still require review. Sandbox media requests are flagged for seller review without downloading unsupported media.
 
-Messages have unique IDs. Duplicate incoming messages and repeated completed-case confirmations cannot repeat a business operation. A sender can access only orders mapped to their customer record. Guessing an order ID is insufficient.
+Public catalog and policy answers can be composed by Groq from verified store facts. Their audit entries record the model, input message ID, outgoing message ID and response hash. The existing policy engine, proposal confirmations and business-operation transitions remain authoritative; generation cannot authorize an action.
 
-## Storage and access
+Sandbox sends are paced globally, with a persisted send marker before the network boundary and another handoff check before sending. Expired 24-hour messaging windows wait for a new inbound message. There is no generic fallback to a simulated success or an arbitrary template.
 
-Supabase Auth JWTs are checked against issuer, audience, expiration, signature, and a database membership. Owners manage policies, approvals, and product pricing. Member reads and operations remain merchant-scoped.
+## Business consistency
 
-Application tables have PostgreSQL RLS enabled, with no direct client policies. LangGraph tables live in the private `rescueloop_agents` schema. The server database role must be a trusted backend role with the required access. Private storage access is mediated by the API, returning short-lived URLs or authenticated local files. Uploads are limited to 8 MB and 20 megapixels, decoded, resized, and re-encoded to strip metadata.
+- Physical stock minus reserved stock equals available stock. Pickup reserves both stock and slot capacity in one transaction. Collection reduces physical and reserved stock; cancellation releases the holds. Missed windows flag and retain holds.
+- Customization consent updates terms and total, without creating a payment. Engraving requires approval. The exact text, price, wrap, preparation and expiry are included in the proposal.
+- Accepted return inspection is recorded separately from restocking. Refund proposals obey current permissions, cumulative automatic limits and remaining paid balance.
+- Pending and uncertain refunds reserve balance. Definitive failures release it. A confirmed success updates refunded totals once. All demo payment/courier results are explicitly simulated.
 
-## Worker behavior
+## Data and access
 
-Jobs use `FOR UPDATE SKIP LOCKED` and a three-minute lease. Failed inbound work retries up to five times with a delay. Outgoing delivery is marked `sending` before calling Meta. Ambiguous delivery outcomes become `needs_review`; the worker does not automatically resend and risk duplicate customer notifications. No exactly-once network-delivery guarantee is claimed.
+FastAPI checks store membership on every seller operation and owner permissions for policy publication and approvals. Supabase JWTs are verified through JWKS. Application tables have RLS with no browser-facing business access policies; trusted backend database roles perform scoped queries.
 
-WhatsApp template configuration is required outside the messaging window. The configured template must accept one body parameter containing the update. Provider version, phone ID, credentials, and template approval must be verified in the Meta account during live setup.
+Images accept JPEG/PNG/WebP, max 8 MB / 20 megapixels, are re-encoded without metadata, and stored privately. Local access requires seller authorization; hosted access uses short-lived signed URLs. Image content is untrusted and cannot authorize refunds. Model clarity and seller verification are distinct facts.
 
-## Boundaries
+## Metrics and reports
 
-Payments and courier operations are intentionally mocked. Customer consent, approvals, cases, reservations, order mutations, evidence, and audit logs are real persisted demo records. Logs contain action summaries and results, not hidden model reasoning.
+The date filter selects cases by creation date in Asia/Kolkata, using UTC storage. Current statuses add up to the cohort total. Resolution rate is resolved / total. AI share excludes every resolved case with case-specific seller involvement. Median duration includes waiting and reopening. Empty denominators are null. Each case has one active customer rating; corrections add audit events.
+
+Reports are generated on demand, saved with their date range and mode, and cite actual case IDs. Backend code validates IDs and computes distinct-case counts. Three distinct cases establish a recurring theme. Recommendations can create a policy draft but cannot publish it.
+
+## Integration status
+
+Local verification is deterministic and labelled. Live configuration is labelled configured, not treated as proof of live availability. A missing worker or configuration reports unavailable; exhausted/uncertain jobs report delayed. Actual Groq, Supabase and Twilio acceptance remains a separate release gate.

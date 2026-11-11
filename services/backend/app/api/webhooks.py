@@ -1,60 +1,161 @@
-import hashlib
-import hmac
-import json
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import Response
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from twilio.request_validator import RequestValidator
 from app.core.config import get_settings
-from app.db.models import Job, Message
-from app.db.session import get_db
+from app.persistence.models import Job, Message, Merchant, Customer, Conversation, Order, now
+from app.persistence.session import get_db
+from app.domain.cases import delivered_completion, flag
+from app.domain.common import audit
 
-router = APIRouter(prefix="/webhooks/whatsapp", tags=["webhooks"])
-
-
-@router.get("")
-def verify(request: Request):
-    settings = get_settings()
-    supplied = request.query_params.get("hub.verify_token", "")
-    if (
-        not settings.whatsapp_verify_token
-        or request.query_params.get("hub.mode") != "subscribe"
-        or not hmac.compare_digest(supplied, settings.whatsapp_verify_token)
-    ):
-        raise HTTPException(403, "Verification failed")
-    return PlainTextResponse(request.query_params.get("hub.challenge", ""))
+router = APIRouter(prefix="/webhooks/twilio", tags=["Twilio WhatsApp"])
 
 
-@router.post("")
-async def receive_webhook(request: Request, db: Session = Depends(get_db)):
-    settings = get_settings()
+async def verified_form(request):
+    s = get_settings()
+    if s.whatsapp_provider != "twilio":
+        raise HTTPException(404, "Provider is disabled")
     raw = await request.body()
     if len(raw) > 1024 * 1024:
         raise HTTPException(413, "Payload too large")
-    signature = request.headers.get("x-hub-signature-256", "")
-    expected = "sha256=" + hmac.new(settings.whatsapp_app_secret.encode(), raw, hashlib.sha256).hexdigest()
-    if not settings.whatsapp_app_secret or not hmac.compare_digest(signature, expected):
+    form = await request.form()
+    if not s.twilio_auth_token or not s.public_webhook_url:
+        raise HTTPException(503, "Webhook is not configured")
+    url = s.public_webhook_url.rstrip("/") + request.url.path
+    if request.url.query:
+        url += "?" + request.url.query
+    if not RequestValidator(s.twilio_auth_token).validate(
+        url, form, request.headers.get("X-Twilio-Signature", "")
+    ):
         raise HTTPException(403, "Invalid webhook signature")
+    if form.get("AccountSid") != s.twilio_account_sid:
+        raise HTTPException(403, "Unexpected account")
+    return form
+
+
+def apply_delivery(db, msg, status):
+    ranks = {"queued": 0, "sending": 1, "sent": 2, "delivered": 3, "read": 4}
+    if status in {"failed", "undelivered"}:
+        if msg.status in {"delivered", "read"}:
+            return
+        msg.status = "failed"
+        from app.persistence.models import Case
+
+        for cid in msg.case_ids:
+            case = db.get(Case, cid)
+            if case:
+                if msg.completes_case and case.details.get("last_solution") == msg.id:
+                    case.details = {**case.details, "notification_failure": msg.id}
+                flag(db, case, "Customer notification failed. Verify delivery before closing the case.")
+    elif status in ranks and ranks[status] > ranks.get(msg.status, -1):
+        msg.status = status
+    delivered_completion(db, msg)
+
+
+@router.post("/incoming")
+async def incoming(request: Request, db: Session = Depends(get_db)):
+    form = await verified_form(request)
+    s = get_settings()
+    if form.get("To") != s.twilio_whatsapp_from:
+        raise HTTPException(403, "Unexpected recipient")
+    sid = form.get("MessageSid", "")
+    if not sid.startswith("SM") or len(sid) > 100:
+        raise HTTPException(422, "Missing message identifier")
+    if db.get(Message, sid):
+        return Response("<Response/>", media_type="application/xml")
+    merchant = db.scalar(select(Merchant).where(Merchant.id == s.twilio_merchant_id).with_for_update())
+    if not merchant:
+        raise HTTPException(503, "Store mapping is missing")
+    phone = form.get("From", "")
+    if not phone.startswith("whatsapp:+"):
+        raise HTTPException(422, "Expected a WhatsApp sender")
+    phone = phone.removeprefix("whatsapp:")
+    customer = db.scalar(select(Customer).where(Customer.merchant_id == merchant.id, Customer.phone == phone))
+    if not customer:
+        customer = Customer(merchant_id=merchant.id, name="Unverified WhatsApp customer", phone=phone)
+        db.add(customer)
+        db.flush()
+    conv = db.scalar(
+        select(Conversation)
+        .where(Conversation.customer_id == customer.id, Conversation.channel == "whatsapp",
+               Conversation.messaging_provider == "twilio")
+        .with_for_update()
+    )
+    if not conv:
+        orders = list(
+            db.scalars(
+                select(Order).where(Order.customer_id == customer.id, Order.merchant_id == merchant.id)
+            )
+        )
+        conv = Conversation(
+            merchant_id=merchant.id,
+            customer_id=customer.id,
+            channel="whatsapp",
+            messaging_provider="twilio",
+            provider_recipient=phone,
+            order_id=orders[0].id if len(orders) == 1 else None,
+        )
+        db.add(conv)
+        db.flush()
+    conv.last_inbound_at = now()
+    conv.provider_recipient = phone
+    media = []
     try:
-        payload = json.loads(raw)
-        for entry in payload.get("entry", []):
-            for change in entry.get("changes", []):
-                value = change.get("value", {})
-                if value.get("metadata", {}).get("phone_number_id") != settings.whatsapp_phone_number_id:
-                    continue
-                for incoming in value.get("messages", []):
-                    job_id = f"incoming:{incoming['id']}"
-                    if not db.get(Job, job_id):
-                        db.add(Job(id=job_id, kind="incoming_message", payload=incoming))
-                for status in value.get("statuses", []):
-                    msg = db.scalar(select(Message).where(Message.provider_id == status.get("id")))
-                    if msg and status.get("status") in {"sent", "delivered", "read", "failed"}:
-                        ranks = {"sent": 1, "delivered": 2, "read": 3}
-                        value_status = status["status"]
-                        if value_status == "failed" or ranks.get(value_status, 0) > ranks.get(msg.status, 0):
-                            msg.status = value_status
+        count = int(form.get("NumMedia", "0"))
+    except ValueError:
+        raise HTTPException(422, "Invalid media count")
+    if count < 0 or count > 4:
+        raise HTTPException(422, "Send up to four photos per message")
+    for i in range(count):
+        mime = form.get(f"MediaContentType{i}", "")
+        if mime not in {"image/jpeg", "image/png", "image/webp"}:
+            raise HTTPException(422, "Unsupported media type")
+        media.append(form.get(f"MediaUrl{i}", ""))
+    body = str(form.get("Body", ""))[:4000]
+    db.add(
+        Message(
+            id=sid,
+            provider_id=sid,
+            conversation_id=conv.id,
+            role="customer",
+            body=body or "Photo attached",
+            status="received",
+            processed=False,
+        )
+    )
+    db.add(
+        Job(
+            id=f"incoming:{sid}",
+            kind="incoming_message",
+            payload={"message_id": sid, "conversation_id": conv.id, "media": media},
+        )
+    )
+    try:
         db.commit()
-    except (ValueError, KeyError, TypeError) as exc:
+    except IntegrityError:
         db.rollback()
-        raise HTTPException(422, "Malformed webhook") from exc
-    return {"received": True}
+        if not db.get(Message, sid):
+            raise
+    return Response("<Response/>", media_type="application/xml")
+
+
+@router.post("/status")
+async def delivery_status(request: Request, db: Session = Depends(get_db)):
+    form = await verified_form(request)
+    s = get_settings()
+    msg = db.get(Message, request.query_params.get("local_id", ""))
+    if not msg:
+        msg = db.scalar(select(Message).where(Message.provider_id == form.get("MessageSid")))
+    if msg:
+        conv = db.get(Conversation, msg.conversation_id)
+        if conv.merchant_id != s.twilio_merchant_id or conv.messaging_provider != "twilio" or msg.role == "customer":
+            raise HTTPException(403, "Unexpected status target")
+        if msg.provider_id and msg.provider_id != form.get("MessageSid"):
+            raise HTTPException(409, "Provider identifier mismatch")
+        msg.provider_id = form.get("MessageSid")
+        apply_delivery(db, msg, str(form.get("MessageStatus", "")))
+        audit(db, conv.merchant_id, "twilio", "message.delivery", msg.id, status=msg.status)
+        db.commit()
+    return Response("<Response/>", media_type="application/xml")

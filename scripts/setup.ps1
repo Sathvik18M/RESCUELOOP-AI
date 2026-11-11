@@ -11,6 +11,8 @@ try {
 } finally { Pop-Location }
 docker compose -f infra/compose.yaml up -d --wait
 if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL startup failed' }
+& '.\services\backend\.venv\Scripts\python.exe' 'scripts/local-database.py'
+if ($LASTEXITCODE -ne 0) { throw 'Isolated database creation failed' }
 Push-Location -LiteralPath 'services/backend'
 try {
     .\.venv\Scripts\python.exe -m alembic upgrade head

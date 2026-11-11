@@ -9,7 +9,7 @@
     "build": "npm run build --workspace apps/seller-dashboard",
     "typecheck": "npm run typecheck --workspace apps/seller-dashboard",
     "test:e2e": "playwright test",
-    "contracts": "openapi-typescript contracts/openapi.json -o apps/seller-dashboard/src/lib/api.generated.ts",
+    "contracts": "openapi-typescript packages/contracts/openapi.json -o packages/contracts/api.generated.ts",
     "format": "prettier --write apps/seller-dashboard/src apps/seller-dashboard/*.ts tests/e2e playwright.config.ts",
     "format:check": "prettier --check apps/seller-dashboard/src apps/seller-dashboard/*.ts tests/e2e playwright.config.ts"
   },

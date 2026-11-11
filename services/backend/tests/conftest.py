@@ -9,16 +9,32 @@ from fastapi.testclient import TestClient
 # A dedicated test database may be supplied for PostgreSQL integration tests.
 # Otherwise each test uses an isolated in-memory database. Never reset the demo database.
 os.environ["APP_ENV"] = "test"
+os.environ["LOCAL_VERIFICATION_ONLY"] = "false"
 os.environ["AI_MODE"] = "demo"
 os.environ["DEMO_MODE"] = "true"
 os.environ["DEMO_TOKEN"] = "test-token"
+os.environ["WHATSAPP_PROVIDER"] = "disabled"
+for key in [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "OPENAI_API_KEY",
+    "GROQ_API_KEY",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_WHATSAPP_FROM",
+    "PUBLIC_WEBHOOK_URL",
+    "D360_API_KEY",
+    "D360_SANDBOX_RECIPIENT",
+    "D360_WEBHOOK_SECRET",
+]:
+    os.environ[key] = ""
 
 from app.core.config import get_settings
-from app.db.session import Base, get_db
-from app.db import models
+from app.persistence.session import Base, get_db
+from app.persistence import models
 from app.main import app
-from app.modules.seed import seed
-from app.workflows import orchestrator
+from app.domain.seed import seed
+from app.agents.workflows import orchestrator
 
 
 @pytest.fixture

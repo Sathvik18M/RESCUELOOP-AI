@@ -1,332 +1,208 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import {
-  Send,
-  Paperclip,
-  UserRound,
-  ShieldCheck,
-  MessageCircle,
-  ChevronDown,
-  FlaskConical,
-} from "lucide-react";
-import { Workspace, Mutate } from "@/lib/types";
-import { api, shortDate } from "@/lib/api";
+import { useState, useEffect, useRef } from "react";
+import { Send, UserRound, ArrowUpRight, MessageCircle } from "lucide-react";
+import { Workspace, Conversation, Mutate, Message } from "@/lib/types";
 import { Badge, Empty } from "@/components/ui";
-
+import { shortDate, title } from "@/lib/api";
+export function Messages({
+  messages,
+  mutate,
+}: {
+  messages: Message[];
+  mutate?: Mutate;
+}) {
+  return (
+    <div className="messages">
+      {messages.map((m) => (
+        <article
+          key={m.id}
+          className={
+            "message " + (m.role === "customer" ? "customer" : "outgoing")
+          }
+        >
+          <div className="message-author">
+            {m.role === "customer"
+              ? "Customer"
+              : m.role === "seller"
+                ? "Store team"
+                : m.role === "system"
+                  ? "Store update"
+                  : "RescueLoop AI"}
+          </div>
+          <p>{m.body}</p>
+          <small>
+            {shortDate(m.created_at)} · {title(m.status)}
+          </small>
+          {mutate && ["uncertain", "failed"].includes(m.status) && (
+            <button
+              className="text-link"
+              onClick={() =>
+                void mutate("/messages/" + m.id + "/reconcile", {}).catch(
+                  () => {},
+                )
+              }
+            >
+              Check delivery status
+            </button>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
 export function Inbox({
   data,
-  token,
   mutate,
-  refresh,
-  notify,
-  search,
+  onCase,
+  search = "",
 }: {
   data: Workspace;
-  token: string;
   mutate: Mutate;
-  refresh: () => Promise<void>;
-  notify: (text: string, error?: boolean) => void;
-  search: string;
+  onCase: (id: string) => void;
+  search?: string;
 }) {
   const [selected, setSelected] = useState(data.conversations[0]?.id || "");
-  const [text, setText] = useState("");
+  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [role, setRole] = useState("customer");
-  const end = useRef<HTMLDivElement>(null);
-  const upload = useRef<HTMLInputElement>(null);
   const conv = data.conversations.find((c) => c.id === selected);
-  const order = data.orders.find((o) => o.id === conv?.order_id);
+  const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [conv?.messages.length, selected]);
-  async function send(value = text) {
-    if (!value.trim() || !conv || busy) return;
+    bottom.current?.scrollIntoView({ block: "nearest" });
+  }, [selected, conv?.messages.length]);
+  const cases = data.cases.filter((c) => c.conversation_id === selected);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.trim() || !conv) return;
     setBusy(true);
     try {
-      await mutate(
-        role === "customer"
-          ? `/demo/conversations/${conv.id}/messages`
-          : `/conversations/${conv.id}/reply`,
-        { text: value, message_id: crypto.randomUUID() },
-      );
-      setText("");
+      await mutate("/conversations/" + conv.id + "/reply", {
+        text: draft,
+        message_id: crypto.randomUUID(),
+      });
+      setDraft("");
     } catch {
     } finally {
       setBusy(false);
     }
   }
-  async function attach(file: File) {
-    if (!conv) return;
-    setBusy(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      await api(`/demo/conversations/${conv.id}/evidence`, token, {
-        method: "POST",
-        body: form,
-      });
-      await refresh();
-      notify("Photo saved for review");
-    } catch (e) {
-      notify(e instanceof Error ? e.message : "Upload failed", true);
-    } finally {
-      setBusy(false);
-    }
-  }
-  const suggestions =
-    conv?.order_id === "ORD1043"
-      ? [
-          "Can I collect the wallet tomorrow afternoon?",
-          "I want to checkout",
-          "5 stars, lovely gift wrapping!",
-        ]
-      : [
-          "Redelivery please. Address: 12 Demo Road, Bengaluru",
-          "My headphones arrived damaged",
-          "I want a refund",
-        ];
   return (
-    <div className="inbox">
+    <div className="inbox-layout">
       <aside className="conversation-list">
-        <div className="conversation-heading">
+        <div className="list-heading">
           <h2>Conversations</h2>
           <span>{data.conversations.length}</span>
         </div>
         {data.conversations
           .filter((c) =>
-            `${c.customer_name} ${c.order_id}`
-              .toLowerCase()
-              .includes(search.toLowerCase()),
+            c.customer_name.toLowerCase().includes(search.toLowerCase()),
           )
           .map((c) => (
             <button
-              className={`conversation ${selected === c.id ? "selected" : ""}`}
               key={c.id}
+              className={
+                "conversation-option " + (c.id === selected ? "selected" : "")
+              }
               onClick={() => {
                 setSelected(c.id);
-                setText("");
-                setRole(c.channel === "demo" ? "customer" : "seller");
+                setDraft("");
               }}
             >
               <span className="avatar">
                 {c.customer_name
                   .split(" ")
-                  .map((s) => s[0])
+                  .map((n) => n[0])
                   .slice(0, 2)
                   .join("")}
               </span>
-              <div>
+              <span>
                 <strong>{c.customer_name}</strong>
                 <p>{c.messages.at(-1)?.body || "No messages yet"}</p>
                 <small>
-                  {c.order_id || "No order selected"} ·{" "}
-                  {c.handoff ? "Human support" : "AI assistance"}
+                  {c.handoff
+                    ? "Seller handling"
+                    : c.channel === "demo"
+                      ? "Synthetic conversation"
+                      : "WhatsApp"}
                 </small>
-              </div>
+              </span>
             </button>
           ))}
-        <div className="inbox-foot">
-          <ShieldCheck size={16} />
-          <span>Conversations stay with their store.</span>
-        </div>
+        <p className="list-footer">
+          <MessageCircle size={13} /> Customers message through WhatsApp.
+        </p>
       </aside>
       {conv ? (
-        <>
-          <section className="chat">
-            <header className="chat-header">
-              <div className="avatar">{conv.customer_name.charAt(0)}</div>
-              <div className="grow">
-                <h2>{conv.customer_name}</h2>
-                <p>
-                  <span className="live-dot" />
-                  {conv.handoff
-                    ? "Seller is handling this conversation"
-                    : "RescueLoop assistance active"}
-                </p>
-              </div>
-              <button
-                className="button small"
-                onClick={() =>
-                  mutate(
-                    `/conversations/${conv.id}/handoff`,
-                    { enabled: !conv.handoff },
-                    "PATCH",
-                  ).catch(() => {})
-                }
-              >
-                <UserRound size={15} />
-                {conv.handoff ? "Return to AI" : "Take over"}
-              </button>
-            </header>
-            {conv.channel === "demo" && (
-              <div className="demo-strip">
-                <FlaskConical size={15} /> Demo conversation · Messages stay in
-                this workspace
-              </div>
-            )}
-            <div className="messages">
-              <div className="chat-day">Conversation history</div>
-              {conv.messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`message ${m.role === "customer" ? "incoming" : "outgoing"}`}
-                >
-                  <span className="message-author">
-                    {m.role === "customer"
-                      ? conv.customer_name
-                      : m.role === "seller"
-                        ? "You"
-                        : "RescueLoop"}
-                  </span>
-                  <p>{m.body}</p>
-                  <small>
-                    {new Date(m.created_at).toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    · {m.status.replaceAll("_", " ")}
-                  </small>
-                </div>
-              ))}
-              <div ref={end} />
+        <section className="conversation-thread">
+          <header>
+            <div>
+              <h2>{conv.customer_name}</h2>
+              <p>
+                {conv.handoff
+                  ? "Store team is handling this conversation"
+                  : data.mode.ai === "demo"
+                    ? "Local verification · synthetic conversation"
+                    : "AI assistance enabled"}
+              </p>
             </div>
-            {data.mode.demo && role === "customer" && (
-              <div className="suggestions">
-                {suggestions.map((s) => (
-                  <button key={s} onClick={() => setText(s)}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-            <form
-              className="composer"
-              onSubmit={(e) => {
-                e.preventDefault();
-                send();
-              }}
+            <button
+              className={conv.handoff ? "button primary" : "button"}
+              onClick={() =>
+                void mutate(
+                  "/conversations/" + conv.id + "/handoff",
+                  { enabled: !conv.handoff },
+                  "PATCH",
+                ).catch(() => {})
+              }
             >
-              {data.mode.demo ? (
-                <label className="role-select">
-                  <span className="sr-only">Send as</span>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                  >
-                    <option value="customer">Demo customer</option>
-                    <option value="seller">Seller</option>
-                  </select>
-                  <ChevronDown size={13} />
-                </label>
-              ) : (
-                <span>Seller reply</span>
-              )}
-              <div className="compose-row">
-                {data.mode.demo && role === "customer" && (
-                  <>
-                    <input
-                      ref={upload}
-                      type="file"
-                      hidden
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) attach(f);
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label="Attach product photo"
-                      disabled={busy}
-                      onClick={() => upload.current?.click()}
-                    >
-                      <Paperclip size={20} />
-                    </button>
-                  </>
-                )}
-                <textarea
-                  aria-label="Message"
-                  placeholder={
-                    role === "seller" && !conv.handoff
-                      ? "Take over the conversation to send a seller reply"
-                      : "Write a message…"
-                  }
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  maxLength={4000}
-                  rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      send();
-                    }
-                  }}
-                />
-                <button
-                  className="send-button"
-                  type="submit"
-                  aria-label="Send message"
-                  disabled={
-                    busy || !text.trim() || (role === "seller" && !conv.handoff)
-                  }
-                >
-                  <Send size={19} />
-                </button>
-              </div>
-              <p>
-                {busy
-                  ? "Processing your message…"
-                  : "Enter to send · Shift + Enter for a new line"}
-              </p>
-            </form>
-          </section>
-          <aside className="customer-context">
-            <div className="eyebrow">CUSTOMER CONTEXT</div>
-            <h3>{conv.customer_name}</h3>
-            {order && (
-              <>
-                <div className="context-card">
-                  <span className="eyebrow">CURRENT ORDER</span>
-                  <h4>{order.id}</h4>
-                  <p>{order.product_name}</p>
-                  <Badge value={order.status} />
-                </div>
-                <h4>Related requests</h4>
-                {data.cases
-                  .filter((c) => c.conversation_id === conv.id)
-                  .map((c) => (
-                    <div className="context-request" key={c.id}>
-                      <strong>{c.kind}</strong>
-                      <Badge value={c.status} />
-                      {c.status === "pending_customer" && data.mode.demo && (
-                        <button
-                          className="text-link"
-                          onClick={() => {
-                            setRole("customer");
-                            setText(`CONFIRM ${c.id}`);
-                          }}
-                        >
-                          Prepare confirmation
-                        </button>
-                      )}
-                    </div>
-                  ))}
-              </>
-            )}
-            <div className="context-note">
-              <ShieldCheck size={20} />
-              <p>
-                Each action checks the published policy and records the outcome.
-              </p>
+              <UserRound size={15} />
+              {conv.handoff ? "Resume AI" : "Take over"}
+            </button>
+          </header>
+          <div className="thread-scroll">
+            <Messages messages={conv.messages} mutate={mutate} />
+            <div ref={bottom} />
+          </div>
+          <div className="related-cases">
+            {cases.map((c) => (
+              <button key={c.id} onClick={() => onCase(c.id)}>
+                {title(c.kind)} <Badge value={c.primary_status} />
+                <ArrowUpRight size={14} />
+              </button>
+            ))}
+          </div>
+          <form className="reply-composer" onSubmit={submit}>
+            <label htmlFor="seller-reply">
+              {conv.handoff
+                ? "Reply as store team"
+                : "Take over to reply personally"}
+            </label>
+            <div>
+              <textarea
+                id="seller-reply"
+                aria-label="Seller reply"
+                value={draft}
+                disabled={!conv.handoff || busy}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={
+                  conv.handoff
+                    ? "Write a message to the customer…"
+                    : "AI assistance is managing this conversation."
+                }
+              />
+              <button
+                className="button primary"
+                aria-label="Send seller reply"
+                disabled={!conv.handoff || !draft.trim() || busy}
+              >
+                <Send size={18} />
+              </button>
             </div>
-          </aside>
-        </>
+          </form>
+        </section>
       ) : (
         <Empty
-          title="No conversations yet"
-          text="Incoming customer messages will appear here."
+          title="Select a conversation"
+          text="Customer messages will appear here."
         />
       )}
     </div>
