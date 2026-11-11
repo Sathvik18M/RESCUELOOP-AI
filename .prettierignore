@@ -1,0 +1,6 @@
+node_modules/
+.local/
+.next/
+.next-e2e/
+apps/seller-dashboard/src/lib/api.generated.ts
+contracts/openapi.json

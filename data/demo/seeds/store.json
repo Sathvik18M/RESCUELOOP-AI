@@ -1,0 +1,24 @@
+{
+  "merchant": {"id":"SELLER001","name":"Loop & Co.","settings":{"location":"Indiranagar, Bengaluru","support_email":"hello@example.test"}},
+  "customers": [
+    {"id":"CUS001","name":"Aarav Sharma","phone":"910000000001","language":"en"},
+    {"id":"CUS002","name":"Ananya Rao","phone":"910000000002","language":"en"}
+  ],
+  "products": [
+    {"id":"HEADPHONE001","name":"Studio Wireless Headphones","description":"Over-ear wireless headphones with a foldable headband and 30-hour battery.","price_paise":199900,"stock":24,"category":"Electronics","options":{"color":["Midnight","Cloud"],"gift_wrap_paise":14900}},
+    {"id":"WALLET001","name":"Everyday Leather Wallet","description":"A compact leather wallet, made personal with gift wrapping and name engraving.","price_paise":79900,"stock":18,"category":"Accessories","options":{"color":["Cognac","Black"],"gift_wrap_paise":14900,"engraving":"approval_required"}}
+  ],
+  "orders": [
+    {"id":"ORD1042","customer_id":"CUS001","product_id":"HEADPHONE001","status":"shipped","delivery_status":"failed_attempt","total_paise":199900,"paid_paise":199900,"customizations":[]},
+    {"id":"ORD1043","customer_id":"CUS002","product_id":"WALLET001","status":"draft","delivery_status":"not_shipped","total_paise":79900,"paid_paise":0,"customizations":[]}
+  ],
+  "policy":{"return_window_days":7,"auto_refund_limit_paise":25000,"pickup":"approval_required","engraving_requires_approval":true,"cancellation_before_shipping":true,"warranty_days":365,"delivery_fee_paise":0,"tax_basis_points":0},
+  "slots":[
+    {"id":"SLOT-AM","label":"Tomorrow, 11 AM – 1 PM","location":"Loop & Co., Indiranagar","capacity":5},
+    {"id":"SLOT-PM","label":"Tomorrow, 3 PM – 5 PM","location":"Loop & Co., Indiranagar","capacity":5}
+  ],
+  "reviews":[
+    {"id":"REV001","product_id":"HEADPHONE001","author":"Demo customer","rating":2,"body":"Delivery was attempted, but the courier could not locate my address.","topic":"Delivery","source":"demo"},
+    {"id":"REV002","product_id":"WALLET001","author":"Demo customer","rating":5,"body":"Love the leather finish. Name engraving would make a thoughtful gift.","topic":"Customization","source":"demo"}
+  ]
+}
