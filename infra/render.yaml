@@ -11,7 +11,7 @@ services:
     dockerContext: .
     dockerCommand: python -m app.hosted
     healthCheckPath: /health
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     envVars:
       - key: APP_ENV
         value: staging
