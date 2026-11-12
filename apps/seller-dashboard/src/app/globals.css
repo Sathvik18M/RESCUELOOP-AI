@@ -1079,6 +1079,22 @@ td .subtle {
   font-size: 11px;
   line-height: 1.55;
 }
+.message-attachment {
+  margin: 12px 0 0;
+  max-width: 360px;
+}
+.message-attachment img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.message-attachment figcaption {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
 .related-cases {
   display: flex;
   gap: 7px;

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Send, UserRound, ArrowUpRight, MessageCircle } from "lucide-react";
 import { Workspace, Conversation, Mutate, Message } from "@/lib/types";
 import { Badge, Empty } from "@/components/ui";
@@ -30,6 +31,18 @@ export function Messages({
                   : "RescueLoop AI"}
           </div>
           <p>{m.body}</p>
+          {m.id === "SHOWCASE-MESSAGE-13-3" && (
+            <figure className="message-attachment">
+              <Image
+                src="/brand/damaged-headphones.svg"
+                alt="Illustration showing headphones with a broken headband"
+                width={900}
+                height={620}
+                unoptimized
+              />
+              <figcaption>Attachment illustration · Broken headband</figcaption>
+            </figure>
+          )}
           <small>
             {shortDate(m.created_at)} · {title(m.status)}
           </small>
@@ -84,7 +97,18 @@ export function Inbox({
   onCase: (id: string) => void;
   search?: string;
 }) {
-  const [selected, setSelected] = useState(data.conversations[0]?.id || "");
+  const conversations = [...data.conversations].sort((a, b) => {
+    const rank = (c: Conversation) =>
+      c.id === "SHOWCASE-CONVERSATION-29"
+        ? 0
+        : c.id === "SHOWCASE-CONVERSATION-13"
+          ? 1
+          : c.id.startsWith("SHOWCASE-CONVERSATION-")
+            ? 2
+            : 3;
+    return rank(a) - rank(b);
+  });
+  const [selected, setSelected] = useState(conversations[0]?.id || "");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const conv = data.conversations.find((c) => c.id === selected);
@@ -115,7 +139,7 @@ export function Inbox({
           <h2>Conversations</h2>
           <span>{data.conversations.length}</span>
         </div>
-        {data.conversations
+        {conversations
           .filter((c) =>
             c.customer_name.toLowerCase().includes(search.toLowerCase()),
           )
@@ -141,10 +165,10 @@ export function Inbox({
                 <strong>{c.customer_name}</strong>
                 <p>{c.messages.at(-1)?.body || "No messages yet"}</p>
                 <small>
-                  {c.handoff
-                    ? "Seller handling"
-                    : c.channel === "demo"
-                      ? "Synthetic conversation"
+                  {c.channel === "demo"
+                    ? "Sample conversation"
+                    : c.handoff
+                      ? "Seller handling"
                       : "WhatsApp"}
                 </small>
               </span>
@@ -160,11 +184,13 @@ export function Inbox({
             <div>
               <h2>{conv.customer_name}</h2>
               <p>
-                {conv.handoff
-                  ? "Store team is handling this conversation"
-                  : data.mode.ai === "demo"
-                    ? "Local verification · synthetic conversation"
-                    : "AI assistance enabled"}
+                {conv.channel === "demo"
+                  ? "Sample conversation · Prepared support scenario"
+                  : conv.handoff
+                    ? "Store team is handling this conversation"
+                    : data.mode.ai === "demo"
+                      ? "Local verification · synthetic conversation"
+                      : "AI assistance enabled"}
               </p>
             </div>
             <button
