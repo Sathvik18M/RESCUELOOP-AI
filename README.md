@@ -12,6 +12,21 @@ Hosted seller demo: [rescueloop-ai-xi.vercel.app](https://rescueloop-ai-xi.verce
 
 ## Local setup and launch
 
+For a presentation using the existing hosted database and seller account, run:
+
+```powershell
+cd D:\Projects\RESCUELOOP-AI
+.\scripts\start-presentation.ps1
+```
+
+Open http://127.0.0.1:3100 and sign in. Keep the terminal open; Ctrl+C stops it.
+This runs only the dashboard locally and proxies seller API requests to the existing
+Render backend, avoiding cross-origin failures. Internet is required. It shows the
+same saved conversations as the deployed site and does not start another backend,
+worker, or WhatsApp webhook. The existing `.env` is left unchanged.
+
+For the separate local database and deterministic verification setup:
+
 Prerequisites: Node.js 24, Python 3.12 / uv, PowerShell 7 and Docker Desktop.
 
 ```powershell

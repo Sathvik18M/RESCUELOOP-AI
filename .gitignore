@@ -22,4 +22,5 @@ test-results/
 .next-rebuild/
 .next-conversation/
 .next-release/
+.next-presentation/
 .vercel/
