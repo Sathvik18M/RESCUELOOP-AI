@@ -64,7 +64,7 @@ def main():
     env=dotenv_values(ROOT/'.env',interpolate=False)
     target=urlsplit(env['HOSTED_DATABASE_URL'].replace('postgresql+psycopg://','postgresql://',1))
     runtime=dict(os.environ,PGHOST=target.hostname,PGPORT=str(target.port or 5432),PGDATABASE=unquote(target.path.lstrip('/')),PGUSER=unquote(target.username),PGPASSWORD=unquote(target.password),PGSSLMODE='require',PGCONNECT_TIMEOUT='15')
-    statements=["BEGIN; SET LOCAL statement_timeout='25s';", "DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM merchants WHERE id='SELLER001') THEN RAISE EXCEPTION 'Merchant missing'; END IF; END $$;"]
+    statements=["BEGIN; SET LOCAL statement_timeout='25s';", "DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM merchants WHERE id='SELLER001') THEN RAISE EXCEPTION 'Merchant missing'; END IF; END $$;", "DO $batch$ BEGIN"]
     # Same baseline and replayable IDs: reruns add nothing and never rewrite history.
     stamp=datetime.now(timezone.utc)-timedelta(hours=2)
     total=0
@@ -90,7 +90,7 @@ def main():
             statements.append(insert('messages',dict(id=mid,conversation_id=conv,role=role,body=body,status='sample',provider_id=None,created_at=(stamp+timedelta(minutes=index,seconds=n*25)).isoformat(),case_ids='[]',completes_case=False,processed=True)))
             total+=1
         statements.append(insert('audit_logs',dict(id='SHOWCASE-AUDIT-'+code,merchant_id='SELLER001',actor='presentation_fixture',action='presentation.sample_added',entity_id=conv,detail=json.dumps({'synthetic':True,'issue_code':code,'source':'scripts/add_judges_inbox.py','messages':len(messages),'provider_calls':0,'case_counters_changed':False}),created_at=datetime.now(timezone.utc).isoformat())))
-    statements += ["SELECT json_build_object('sample_conversations',count(*)) FROM conversations WHERE id LIKE 'SHOWCASE-CONVERSATION-%';", "SELECT json_build_object('sample_messages',count(*)) FROM messages WHERE id LIKE 'SHOWCASE-MESSAGE-%';", "SELECT json_build_object('outbound_jobs',count(*)) FROM jobs WHERE payload->>'message_id' LIKE 'SHOWCASE-MESSAGE-%';",'COMMIT;']
+    statements += ["END $batch$;", "SELECT json_build_object('sample_conversations',count(*)) FROM conversations WHERE id LIKE 'SHOWCASE-CONVERSATION-%';", "SELECT json_build_object('sample_messages',count(*)) FROM messages WHERE id LIKE 'SHOWCASE-MESSAGE-%';", "SELECT json_build_object('outbound_jobs',count(*)) FROM jobs WHERE payload->>'message_id' LIKE 'SHOWCASE-MESSAGE-%';",'COMMIT;']
     command=['docker','exec','-i']
     for key in ('PGHOST','PGPORT','PGDATABASE','PGUSER','PGPASSWORD','PGSSLMODE','PGCONNECT_TIMEOUT'): command+=['-e',key]
     command+=['infra-postgres-1','psql','-X','-q','-t','-A','--no-password','--set','ON_ERROR_STOP=1']
