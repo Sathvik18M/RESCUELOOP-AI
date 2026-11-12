@@ -33,18 +33,41 @@ export function Messages({
           <small>
             {shortDate(m.created_at)} · {title(m.status)}
           </small>
-          {mutate && ["uncertain", "failed"].includes(m.status) && (
-            <button
-              className="text-link"
-              onClick={() =>
-                void mutate("/messages/" + m.id + "/reconcile", {}).catch(
-                  () => {},
-                )
-              }
-            >
-              Check delivery status
-            </button>
-          )}
+          {m.role !== "customer" &&
+            ["uncertain", "failed"].includes(m.status) &&
+            !m.provider_id?.trim() && (
+              <div className="message-delivery-note" role="note">
+                <strong>
+                  {m.status === "uncertain"
+                    ? "Message delivery is unconfirmed."
+                    : "This message could not be sent."}
+                </strong>
+                <span>
+                  No provider tracking ID is recorded, so an automatic delivery
+                  check is unavailable.
+                </span>
+                <span>
+                  {m.status === "uncertain"
+                    ? "Confirm receipt with the customer before sending again."
+                    : "Review the messaging provider’s connection or quota before trying a new message."}
+                </span>
+              </div>
+            )}
+          {mutate &&
+            m.role !== "customer" &&
+            !!m.provider_id?.trim() &&
+            ["uncertain", "failed"].includes(m.status) && (
+              <button
+                className="text-link"
+                onClick={() =>
+                  void mutate("/messages/" + m.id + "/reconcile", {}).catch(
+                    () => {},
+                  )
+                }
+              >
+                Check message delivery
+              </button>
+            )}
         </article>
       ))}
     </div>
