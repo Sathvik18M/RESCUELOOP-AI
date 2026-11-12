@@ -1,6 +1,8 @@
 # Integration setup and readiness
 
-The local app uses a temporary Cloudflare tunnel for signed WhatsApp callbacks. No production deployment has been created. Actual WhatsApp acceptance requires an observed incoming message and delivered reply.
+The staging demo is deployed at [the seller dashboard](https://rescueloop-ai-xi.vercel.app) with [the Render API](https://rescueloop-api.onrender.com/health), using the existing Supabase database, Auth and private Storage. The hosted 360dialog callback uses its private URL token; Twilio retains signature verification when selected. Local development can still use the temporary Cloudflare tunnel.
+
+Verified on 12 November 2026: hosted Supabase seller sign-in, preserved conversations and cases, active worker heartbeat, rejection of unauthenticated seller requests and the demo token, and a real incoming WhatsApp policy question followed by a Groq-generated response with matching audit provenance and delivered/read receipts. A newly registered Sandbox tester starts as an unverified customer; changing the test number never grants another customer's order access. Historical failed sends remain saved for review and are not automatically replayed.
 
 ## Environment
 
@@ -17,7 +19,7 @@ Readiness prints presence/status flags only, never secret values. It does not pr
 
 ## Supabase
 
-Create the private `evidence` bucket. Configure the server URL and legacy `service_role` key, plus the same URL and `anon` key for browser authentication. Keep privileged credentials server-side. Private object access uses expiring signed URLs: [Supabase private assets](https://supabase.com/docs/guides/storage/serving/downloads).
+Create the private `evidence` bucket. Configure the server URL and privileged API key in `SUPABASE_SERVICE_ROLE_KEY` (the existing deployment uses a modern Supabase secret key), plus the same URL and public `anon` key for browser authentication. Keep privileged credentials server-side. Private object access uses expiring signed URLs: [Supabase private assets](https://supabase.com/docs/guides/storage/serving/downloads).
 
 Create the seller Auth user through your Supabase project. Provision that existing user UUID explicitly:
 
@@ -75,12 +77,12 @@ Use `-LocalVerification` if you want to keep exercising synthetic local flows wh
 - A seller can sign in with Supabase and is scoped to the correct store.
 - The private bucket accepts an image; a foreign/unauthenticated caller cannot retrieve it.
 - The configured Groq models routes text and assesses an image; failures do not become simulated AI success.
-- A joined WhatsApp phone reaches the signed webhook, and a real reply obtains a delivered/read receipt.
+- A joined WhatsApp phone reaches the authenticated provider webhook, and a real reply obtains a delivered/read receipt.
 - A seller decision causes exactly one follow-up, with separate customer confirmation.
 - Duplicate events, an unavailable provider and a closed messaging window preserve safe state.
 - Actual provider latency and any delivery constraints are recorded.
 
-Render and Docker files are deployment templates until an actual deployment is verified. Hosted staging and production require real authentication and provider configuration. Payment and courier providers remain simulated within this approved scope.
+The Render and Docker configuration is deployed for the staging demo. Hosted staging and production require real authentication and provider configuration. The verified text delivery above does not establish media retrieval or every seller workflow on the hosted deployment. Payment and courier providers remain simulated within this approved scope.
 
 ## Free hosted demo
 
@@ -88,13 +90,13 @@ The free deployment layout is Vercel Hobby for the seller dashboard, one Render 
 
 This is a staging demo, not an always-on production service. [Render Free services](https://render.com/docs/free) can sleep when idle; both the API and worker stop during that time. Delayed jobs resume after wake-up. A new inbound webhook can incur a cold start and provider retries. No artificial keepalive or paid upgrade is configured. Provider API quotas still apply independently.
 
-1. Save the existing Supabase **Session pooler** PostgreSQL URI as `HOSTED_DATABASE_URL` in the ignored root `.env`, with `sslmode=require`. This operator-only value does not automatically replace local `DATABASE_URL`. Use session mode rather than transaction mode because the workflow uses session advisory locks and prepared statements. See [Supabase connection options](https://supabase.com/docs/guides/database/connecting-to-postgres).
+1. Save the existing Supabase **Session pooler** PostgreSQL URI as `HOSTED_DATABASE_URL` in the ignored root `.env`, with `sslmode=require`. Percent-encode reserved characters in the username/password components, including `@`; otherwise a driver can mistake part of the password for the hostname. This operator-only value does not automatically replace local `DATABASE_URL`. Use session mode rather than transaction mode because the workflow uses session advisory locks and prepared statements. See [Supabase connection options](https://supabase.com/docs/guides/database/connecting-to-postgres).
 2. Inspect the hosted destination before migration. Back up the current local database and preserve all messages, cases, counters, audit rows and private workflow checkpoints. Import into an empty application schema only; do not overwrite existing hosted records. Do not run reset or fresh seed as a substitute for migrating the existing conversation history.
 3. Apply/verify Alembic head `0007` and verify imported record counts before starting workers. Keep the old local database as a recovery copy. Coordinate the webhook cutover and stop the old worker so two independent copies cannot both process the conversation.
 4. Create the backend from `infra/render.yaml` on the Free plan. Set its `DATABASE_URL` to the hosted URI and copy only the required Groq, Supabase and 360dialog settings into Render's private environment settings. Keep `APP_ENV=staging`, `DEMO_MODE=false`, `AI_MODE=groq` and `WHATSAPP_PROVIDER=360dialog_sandbox`. The entry point derives the public webhook origin from Render's `RENDER_EXTERNAL_URL`; it never prints the private callback token. Twilio remains available in code but disabled.
-5. On Vercel Hobby, use repository root directory `apps/seller-dashboard`, the Next.js framework, and Node.js 24. Set build-time `NEXT_PUBLIC_API_URL` to the hosted backend HTTPS origin, `NEXT_PUBLIC_DEMO_MODE=false`, and the existing Supabase public URL/anon key. Never put backend credentials in a `NEXT_PUBLIC_` setting. Permit the exact seller-dashboard origin in backend `CORS_ORIGINS`.
+5. On Vercel Hobby, use repository root directory `apps/seller-dashboard`, the Next.js framework, Node.js 24, install command `npm ci --prefix ../..`, and build command `npm run build`. Set `NEXT_DIST_DIR=.next` so Vercel finds the build output. Set build-time `NEXT_PUBLIC_API_URL` to the hosted backend HTTPS origin, `NEXT_PUBLIC_DEMO_MODE=false`, and the existing Supabase public URL/anon key. Never put backend credentials in a `NEXT_PUBLIC_` setting. Permit the exact seller-dashboard origin in backend `CORS_ORIGINS`.
 6. Verify the hosted health endpoint, refusal of unauthenticated seller API requests, real seller sign-in, saved cases, private evidence, and the worker heartbeat. Register the existing 360dialog private callback at the hosted origin only after the database and worker are ready. Do not replay failed or uncertain sends automatically.
-7. Live WhatsApp verification still needs an actual customer message and its delivered reply. A successful deployment does not remove the Sandbox's exhausted quota or add audio/media retrieval.
+7. After changing a provider key or callback, verify an actual customer message, Groq provenance and a delivered/read receipt for the corresponding reply. A successful deployment does not reset a Sandbox quota or add audio/media retrieval.
 
 `.dockerignore` and `.vercelignore` exclude local credentials, runtime logs, virtual environments and build artifacts. The Docker image uses the backend lockfile. The hosted entry point does not seed, migrate, reset or change webhooks on startup.
 

@@ -8,6 +8,8 @@ The [35 customer issue response paths](docs/support-issues.md) cover order, deli
 
 The previous prototype is preserved at commit `4f399b8`. The rebuild uses the separate `rescueloop_rebuild` database locally. The original `rescueloop` database is untouched. See [the free hosted demo setup](docs/deployment.md#free-hosted-demo) for deployment requirements and limitations.
 
+Hosted seller demo: [rescueloop-ai-xi.vercel.app](https://rescueloop-ai-xi.vercel.app). It requires the existing seller's Supabase sign-in. The free Render backend uses the migrated Supabase database. Real customer-initiated WhatsApp text and a Groq-generated reply with delivered/read receipts were verified on 12 November 2026. Sandbox quotas and free-host cold starts still apply.
+
 ## Local setup and launch
 
 Prerequisites: Node.js 24, Python 3.12 / uv, PowerShell 7 and Docker Desktop.
