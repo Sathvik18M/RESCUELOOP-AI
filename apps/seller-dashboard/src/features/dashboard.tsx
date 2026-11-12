@@ -17,11 +17,14 @@ import {
   ArrowUpRight,
   AlertCircle,
   CalendarDays,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { api, DEMO } from "@/lib/api";
 import { supabase } from "@/lib/auth";
 import { Workspace } from "@/lib/types";
 import { Brand, Badge } from "@/components/ui";
+import { RotatingGlobe } from "@/components/RotatingGlobe";
 import { Overview } from "./overview";
 import { Requests } from "./requests";
 import { Inbox } from "./inbox";
@@ -43,6 +46,14 @@ const descriptions: Record<string, string> = {
   insights: "What your customers are telling you.",
 };
 function Login({ onLogin }: { onLogin: (token: string) => void }) {
+  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-color-scheme: dark)");
+    const followSystem = () => setTheme(preference.matches ? "dark" : "light");
+    followSystem();
+    preference.addEventListener("change", followSystem);
+    return () => preference.removeEventListener("change", followSystem);
+  }, []);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [demoToken, setDemoToken] = useState("local-rescueloop-demo"),
@@ -71,24 +82,17 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
     }
   }
   return (
-    <main className="login-page">
-      <div className="login-story">
-        <Brand />
-        <div>
-          <span className="eyebrow">CARE THAT COMES FULL CIRCLE</span>
-          <h1>
-            A little more care.
-            <br />A lot more
-            <br /> <em>coming back.</em>
-          </h1>
-          <p>
-            Thoughtful support for your customers.
-            <br />A clear view for your business.
-          </p>
-        </div>
-        <span>RescueLoop AI / Seller portal</span>
-      </div>
+    <main className="login-page" data-theme={theme ?? undefined}>
       <div className="login-form">
+        <button
+          className="login-theme-toggle"
+          type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          aria-label={theme === "dark" ? "Use light theme" : "Use dark theme"}
+          title={theme === "dark" ? "Use light theme" : "Use dark theme"}
+        >
+          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
         <form onSubmit={submit}>
           <Image
             className="login-logo"
@@ -96,11 +100,11 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
             alt="RescueLoop AI — customer care, full circle"
             width={1254}
             height={1254}
-            sizes="(max-width: 720px) 152px, (max-height: 760px) 168px, 208px"
+            sizes="(max-width: 720px) 144px, (max-height: 760px) 152px, 180px"
             preload
           />
           <span className="eyebrow">SELLER PORTAL</span>
-          <h2>Welcome to your loop.</h2>
+          <h1>Welcome to your loop.</h1>
           <p>
             {DEMO
               ? "Explore Loop & Co. with saved, synthetic support cases."
@@ -161,6 +165,10 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
           </p>
         </form>
       </div>
+      <aside className="login-visual" aria-label="Care that comes full circle">
+        <RotatingGlobe />
+        <p className="login-visual-caption">Care that comes full circle.</p>
+      </aside>
     </main>
   );
 }
