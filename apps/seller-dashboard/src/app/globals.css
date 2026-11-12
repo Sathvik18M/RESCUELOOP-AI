@@ -1798,6 +1798,20 @@ td .subtle {
   width: 365px;
   max-width: 100%;
 }
+.login-logo {
+  display: block;
+  width: 208px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 24px;
+  object-fit: contain;
+}
+@media (min-width: 721px) and (max-height: 760px) {
+  .login-logo {
+    width: 168px;
+    margin-bottom: 20px;
+  }
+}
 .login-form h2 {
   font-size: 27px;
   font-weight: 500;
@@ -2362,6 +2376,10 @@ td .subtle {
   }
   .login-form {
     padding: 38px 30px;
+  }
+  .login-logo {
+    width: 152px;
+    margin-bottom: 24px;
   }
   .login-form h2 {
     font-size: 25px;

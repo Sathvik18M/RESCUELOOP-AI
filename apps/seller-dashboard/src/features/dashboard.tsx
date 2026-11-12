@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -78,8 +79,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
           <h1>
             A little more care.
             <br />A lot more
-            <br />
-            <em>coming back.</em>
+            <br /> <em>coming back.</em>
           </h1>
           <p>
             Thoughtful support for your customers.
@@ -90,6 +90,15 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
       </div>
       <div className="login-form">
         <form onSubmit={submit}>
+          <Image
+            className="login-logo"
+            src="/brand/rescueloop-logo.png"
+            alt="RescueLoop AI — customer care, full circle"
+            width={1254}
+            height={1254}
+            sizes="(max-width: 720px) 152px, (max-height: 760px) 168px, 208px"
+            preload
+          />
           <span className="eyebrow">SELLER PORTAL</span>
           <h2>Welcome to your loop.</h2>
           <p>
