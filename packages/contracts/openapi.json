@@ -1167,14 +1167,70 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Register Username Api Auth Signup Post"
+                  "$ref": "#/components/schemas/RegisteredAccount"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recovery-codes": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Generate Recovery Codes",
+        "operationId": "generate_recovery_codes_api_auth_recovery_codes_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordReset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -1622,6 +1678,29 @@
         ],
         "title": "MessageInput"
       },
+      "PasswordReset": {
+        "properties": {
+          "recovery_code": {
+            "type": "string",
+            "format": "password",
+            "title": "Recovery Code",
+            "writeOnly": true
+          },
+          "new_password": {
+            "type": "string",
+            "format": "password",
+            "title": "New Password",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recovery_code",
+          "new_password"
+        ],
+        "title": "PasswordReset"
+      },
       "PolicyDraftInput": {
         "properties": {
           "instruction": {
@@ -1807,6 +1886,43 @@
           "stock"
         ],
         "title": "ProductUpdate"
+      },
+      "RecoveryCodes": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recovery_codes"
+        ],
+        "title": "RecoveryCodes"
+      },
+      "RegisteredAccount": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recovery Codes"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recovery_codes",
+          "username"
+        ],
+        "title": "RegisteredAccount"
       },
       "ReportInput": {
         "properties": {

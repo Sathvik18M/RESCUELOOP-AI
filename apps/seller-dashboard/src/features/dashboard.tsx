@@ -10,6 +10,7 @@ import {
   ChartNoAxesCombined,
   Search,
   LogOut,
+  KeyRound,
   Menu,
   RefreshCw,
   LoaderCircle,
@@ -21,6 +22,7 @@ import { supabase } from "@/lib/auth";
 import { Workspace } from "@/lib/types";
 import { Brand, Badge } from "@/components/ui";
 import { Login, StoreSetup } from "./seller-auth";
+import { ManageRecoveryCodes } from "./seller-recovery";
 import { Overview } from "./overview";
 import { Requests } from "./requests";
 import { Inbox } from "./inbox";
@@ -118,6 +120,7 @@ function SellerWorkspace({
 }) {
   const section = usePathname().split("/")[1] || "overview";
   const [needsStore, setNeedsStore] = useState(false);
+  const [manageCodes, setManageCodes] = useState(false);
   const [data, setData] = useState<Workspace | null>(null),
     [error, setError] = useState(""),
     [search, setSearch] = useState(""),
@@ -179,9 +182,12 @@ function SellerWorkspace({
       throw e;
     }
   }
+  if (manageCodes)
+    return <ManageRecoveryCodes onClose={() => setManageCodes(false)} />;
   if (needsStore)
     return (
       <StoreSetup
+        onRecovery={() => setManageCodes(true)}
         onSignOut={onSignOut}
         onCreate={async (name) => {
           await api("/workspace", token, {
@@ -244,6 +250,11 @@ function SellerWorkspace({
               Your decisions handle the rest.
             </p>
           </div>
+          {!DEMO && (
+            <button className="nav-item" onClick={() => setManageCodes(true)}>
+              <KeyRound size={18} /> Recovery codes
+            </button>
+          )}
           <button
             className="nav-item"
             onClick={() =>

@@ -1,65 +1,10 @@
 "use client";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import Image from "next/image";
-import { ArrowUpRight, LoaderCircle, Moon, Sun } from "lucide-react";
-import { RotatingGlobe } from "@/components/RotatingGlobe";
+import { useState, type FormEvent } from "react";
+import { ArrowUpRight, LoaderCircle } from "lucide-react";
 import { api, DEMO } from "@/lib/api";
 import { passwordLoginId, supabase } from "@/lib/auth";
-
-function AuthForm({
-  title,
-  description,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  description: string;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  children: ReactNode;
-}) {
-  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
-  useEffect(() => {
-    const preference = window.matchMedia("(prefers-color-scheme: dark)");
-    const followSystem = () => setTheme(preference.matches ? "dark" : "light");
-    followSystem();
-    preference.addEventListener("change", followSystem);
-    return () => preference.removeEventListener("change", followSystem);
-  }, []);
-  return (
-    <main className="login-page" data-theme={theme ?? undefined}>
-      <div className="login-form">
-        <button
-          className="login-theme-toggle"
-          type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label={theme === "dark" ? "Use light theme" : "Use dark theme"}
-          title={theme === "dark" ? "Use light theme" : "Use dark theme"}
-        >
-          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-        <form onSubmit={onSubmit}>
-          <Image
-            className="login-logo"
-            src="/brand/rescueloop-logo.png"
-            alt="RescueLoop AI — customer care, full circle"
-            width={1254}
-            height={1254}
-            sizes="(max-width: 720px) 144px, (max-height: 760px) 152px, 180px"
-            preload
-          />
-          <span className="eyebrow">SELLER PORTAL</span>
-          <h1>{title}</h1>
-          <p>{description}</p>
-          {children}
-        </form>
-      </div>
-      <aside className="login-visual" aria-label="Care that comes full circle">
-        <RotatingGlobe />
-        <p className="login-visual-caption">Care that comes full circle.</p>
-      </aside>
-    </main>
-  );
-}
+import { AuthForm } from "./auth-form";
+import { SavedRecoveryCodes, ResetPassword } from "./seller-recovery";
 
 export function Login({
   onDemoLogin,
@@ -69,6 +14,9 @@ export function Login({
   initialError: string;
 }) {
   const [signup, setSignup] = useState(false);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [recover, setRecover] = useState(false);
+  const [notice, setNotice] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [demoToken, setDemoToken] = useState("local-rescueloop-demo");
@@ -76,8 +24,8 @@ export function Login({
   const [error, setError] = useState<string | null>(null);
   const errorMessage = error ?? initialError;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     setBusy(true);
     setError("");
     try {
@@ -86,25 +34,25 @@ export function Login({
         onDemoLogin(demoToken);
         return;
       }
-      let identifier = username.trim();
+      const identifier = username.trim();
       if (signup) {
-        const account = await api<{ username: string }>("/auth/signup", null, {
+        const account = await api<{
+          username: string;
+          recovery_codes: string[];
+        }>("/auth/signup", null, {
           method: "POST",
           body: JSON.stringify({ username: identifier, password }),
         });
-        identifier = account.username;
-        setUsername(identifier);
+        setUsername(account.username);
         setSignup(false);
+        setCodes(account.recovery_codes);
+        return;
       }
       const { error } = await supabase().auth.signInWithPassword({
         email: passwordLoginId(identifier),
         password,
       });
       if (error) {
-        if (signup)
-          throw new Error(
-            "Your account was created. Sign in to open your store.",
-          );
         if (error.code === "invalid_credentials")
           throw new Error("Incorrect username or password.");
         throw error;
@@ -120,6 +68,27 @@ export function Login({
     }
   }
 
+  if (codes.length)
+    return (
+      <SavedRecoveryCodes
+        codes={codes}
+        onContinue={() => {
+          setCodes([]);
+          void submit();
+        }}
+      />
+    );
+  if (recover)
+    return (
+      <ResetPassword
+        onClose={(changed) => {
+          setRecover(false);
+          setNotice(
+            changed ? "Password reset. Sign in with your new password." : "",
+          );
+        }}
+      />
+    );
   return (
     <AuthForm
       title={signup ? "Create your seller account" : "Welcome to your loop."}
@@ -183,6 +152,11 @@ export function Login({
           </label>
         </>
       )}
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
       {errorMessage && (
         <p className="form-error" role="alert">
           {errorMessage}
@@ -197,6 +171,21 @@ export function Login({
             : "Sign in"}
         <ArrowUpRight size={16} />
       </button>
+      {!DEMO && !signup && (
+        <p className="auth-switch">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setPassword("");
+              setError("");
+              setRecover(true);
+            }}
+          >
+            Forgot password?
+          </button>
+        </p>
+      )}
       {!DEMO && (
         <p className="auth-switch">
           {signup ? "Already have an account? " : "New to RescueLoop? "}
@@ -205,6 +194,7 @@ export function Login({
             disabled={busy}
             onClick={() => {
               setSignup(!signup);
+              setNotice("");
               setError("");
               setPassword("");
             }}
@@ -224,9 +214,11 @@ export function Login({
 export function StoreSetup({
   onCreate,
   onSignOut,
+  onRecovery,
 }: {
   onCreate: (name: string) => Promise<void>;
   onSignOut: () => Promise<void>;
+  onRecovery: () => void;
 }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -269,6 +261,11 @@ export function StoreSetup({
       <button className="button primary full" disabled={busy || !name.trim()}>
         Create workspace <ArrowUpRight size={16} />
       </button>
+      <p className="auth-switch">
+        <button type="button" disabled={busy} onClick={onRecovery}>
+          Recovery codes
+        </button>
+      </p>
       <p className="auth-switch">
         <button
           type="button"

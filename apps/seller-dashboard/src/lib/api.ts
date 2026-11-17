@@ -35,6 +35,7 @@ export async function api<T>(
         : "Please check the entered values",
     );
   }
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 export const money = (paise: number) =>

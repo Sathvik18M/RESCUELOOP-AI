@@ -1901,6 +1901,18 @@ td .subtle {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.recovery-codes {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+.recovery-codes li {
+  padding: 0.45rem 0;
+  font-size: clamp(0.68rem, 2.9vw, 0.9rem);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 .form-error {
   color: var(--red) !important;
 }

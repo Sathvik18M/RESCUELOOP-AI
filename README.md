@@ -10,7 +10,7 @@ The previous prototype is preserved at commit `4f399b8`. The rebuild uses the se
 
 Hosted seller demo: [rescueloop-ai-xi.vercel.app](https://rescueloop-ai-xi.vercel.app). The demo store requires its seller's Supabase sign-in. The free Render backend uses the migrated Supabase database. Real customer-initiated WhatsApp text and a Groq-generated reply with delivered/read receipts were verified on 12 November 2026. Sandbox quotas and free-host cold starts still apply.
 
-In account mode, new sellers choose a username and password and can immediately name their store to create a private workspace. Existing email-based sellers can enter their original email in the username field. See the [account setup](docs/deployment.md#supabase).
+In account mode, new sellers choose a username and password, save their one-time recovery codes, and name their private store. Existing sellers can generate codes from **Recovery codes** in their workspace. To reset a forgotten password, select **Forgot password?** and enter a saved code. Existing email-based sellers can still sign in with their original email. See the [account setup](docs/deployment.md#supabase).
 
 ## Local setup and launch
 
@@ -92,7 +92,7 @@ services/backend/app/
   persistence/           SQLAlchemy records and sessions
   workers/               Durable jobs, pacing, retry and recovery
   core/                  Settings and store authorization
-services/backend/migrations/  Alembic changes; head 0007
+services/backend/migrations/  Alembic changes; head 0008
 services/backend/tests/       Workflow and integration-boundary tests
 packages/contracts/          Generated OpenAPI and TypeScript contracts
 data/demo/                   Synthetic catalog, scenarios and test image

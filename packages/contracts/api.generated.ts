@@ -379,6 +379,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Recovery Codes */
+        post: operations["generate_recovery_codes_api_auth_recovery_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password_api_auth_reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/twilio/incoming": {
         parameters: {
             query?: never;
@@ -565,6 +599,19 @@ export interface components {
             /** Message Id */
             message_id: string;
         };
+        /** PasswordReset */
+        PasswordReset: {
+            /**
+             * Recovery Code
+             * Format: password
+             */
+            recovery_code: string;
+            /**
+             * New Password
+             * Format: password
+             */
+            new_password: string;
+        };
         /** PolicyDraftInput */
         PolicyDraftInput: {
             /** Instruction */
@@ -680,6 +727,18 @@ export interface components {
             price_paise: number;
             /** Stock */
             stock: number;
+        };
+        /** RecoveryCodes */
+        RecoveryCodes: {
+            /** Recovery Codes */
+            recovery_codes: string[];
+        };
+        /** RegisteredAccount */
+        RegisteredAccount: {
+            /** Recovery Codes */
+            recovery_codes: string[];
+            /** Username */
+            username: string;
         };
         /** ReportInput */
         ReportInput: {
@@ -1559,10 +1618,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["RegisteredAccount"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_recovery_codes_api_auth_recovery_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
+            };
+        };
+    };
+    reset_password_api_auth_reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordReset"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

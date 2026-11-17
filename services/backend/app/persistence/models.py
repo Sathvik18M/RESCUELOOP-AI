@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
     CheckConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,6 +36,14 @@ class Membership(Base):
     user_id: Mapped[str] = mapped_column(String(100), primary_key=True)
     merchant_id: Mapped[str] = mapped_column(ForeignKey("merchants.id"))
     role: Mapped[str] = mapped_column(String(20), default="owner")
+
+
+class RecoveryCode(Base):
+    __tablename__ = "account_recovery_codes"
+    user_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    slot: Mapped[int] = mapped_column(Integer, primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64), unique=True)
+    spent: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Customer(Base):

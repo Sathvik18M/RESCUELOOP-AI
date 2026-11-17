@@ -56,7 +56,7 @@ def main():
     from app.persistence.session import engine
 
     with engine.connect() as conn:
-        if conn.scalar(text("SELECT version_num FROM alembic_version")) != "0007":
+        if conn.scalar(text("SELECT version_num FROM alembic_version")) != "0008":
             raise RuntimeError("Apply the repository migrations before starting the hosted app")
     return supervise([
         [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0",
