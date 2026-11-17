@@ -1,5 +1,5 @@
 # RescueLoop AI
-
+#Rescueloop AI 
 RescueLoop is a seller-only support portal with a WhatsApp customer interface. The rebuild implements the [16 approved decisions](docs/decisions/approved-baseline.md) using Next.js / TypeScript / Tailwind, FastAPI, LangGraph / Groq, PostgreSQL / SQLAlchemy / Alembic, Supabase Auth / private Storage, a provider-independent WhatsApp adapter (360dialog Sandbox or Twilio), and a persistent Python worker.
 
 The five seller sections are **Overview, Inbox, Requests, Policies, Insights**. Case drawers hold order context, evidence, proposals, seller decisions, conversation history and audit activity. Customers never enter messages through the seller website. Payments, courier actions and collection payments are explicitly simulated.
@@ -130,3 +130,19 @@ cd services/backend
 ```
 
 Reset requires development demo mode and synthetic seed provenance. It removes that store’s records, queued jobs, private evidence (including orphaned uploads) and conversation checkpoints. Other stores remain intact. Reset refuses active worker heartbeats/leases. Storage deletion must succeed before database references are removed. The audit records the explicit reset. Use only the intended isolated demo database.
+
+Sachin S Kumar i am doing the developer 
+
+
+Team & Contributions
+
+Team Mysuru TechBrosss (Hackathon PS-04: Shopping / Delivery / Support)
+
+Samrudh (Project Lead)
+- Led the project from concept to working prototype, and owned the GitHub repository and final submission
+- Set up and ran the full stack locally: FastAPI backend, SQLite database, and the single-page demo UI
+- Integrated the LLM agent layer using OpenAI-compatible tool calling, configured to run on a free Groq model via environment variables
+- Tested the end-to-end flows: failed-delivery rescue with OTP consent, return creation, blocked over-limit refund with human escalation, and the cross-customer ownership check
+- Debugged environment and deployment issues (model availability, port conflicts, secret handling) and kept API keys out of the repo
+
+
