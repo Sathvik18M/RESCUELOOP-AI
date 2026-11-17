@@ -1,7 +1,12 @@
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Permission = Literal["automatic", "approval_required", "unavailable"]
+
+
+class CreateWorkspaceInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    name: str = Field(min_length=1, max_length=120, pattern=r"^[^\x00]+$")
 
 
 class PolicyRules(BaseModel):

@@ -24,19 +24,11 @@ def jwks_client(url: str):
     return jwt.PyJWKClient(f"{url}/auth/v1/.well-known/jwks.json")
 
 
-def seller(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)
-) -> Principal:
+def supabase_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> str:
     settings = get_settings()
     if not credentials:
         raise HTTPException(401, "Sign in to continue")
     token = credentials.credentials
-    if (
-        settings.demo_mode
-        and settings.app_env != "production"
-        and secrets.compare_digest(token, settings.demo_token)
-    ):
-        return Principal("SELLER001", "demo-seller")
     if not settings.supabase_url:
         raise HTTPException(401, "Invalid credentials")
     try:
@@ -49,12 +41,26 @@ def seller(
             issuer=f"{settings.supabase_url}/auth/v1",
             options={"require": ["exp", "sub"]},
         )
-        membership = db.get(Membership, claims["sub"])
-        if not membership:
-            raise HTTPException(403, "No store membership")
-        return Principal(membership.merchant_id, membership.user_id, membership.role)
     except jwt.PyJWTError as exc:
         raise HTTPException(401, "Session expired or invalid") from exc
+    if claims.get("is_anonymous"):
+        raise HTTPException(401, "Sign in with a seller account")
+    return claims["sub"]
+
+
+def seller(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)
+) -> Principal:
+    settings = get_settings()
+    if (
+        credentials and settings.demo_mode and settings.app_env != "production"
+        and secrets.compare_digest(credentials.credentials, settings.demo_token)
+    ):
+        return Principal("SELLER001", "demo-seller")
+    membership = db.get(Membership, supabase_user(credentials))
+    if not membership:
+        raise HTTPException(403, "No store membership")
+    return Principal(membership.merchant_id, membership.user_id, membership.role)
 
 
 def owner(principal: Principal = Depends(seller)):

@@ -1,6 +1,14 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 export const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 export async function api<T>(
   path: string,
   token: string,
@@ -20,7 +28,8 @@ export async function api<T>(
     const error = await response
       .json()
       .catch(() => ({ detail: "The server could not complete this request" }));
-    throw new Error(
+    throw new ApiError(
+      response.status,
       typeof error.detail === "string"
         ? error.detail
         : "Please check the entered values",

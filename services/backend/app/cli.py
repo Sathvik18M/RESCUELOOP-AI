@@ -4,8 +4,8 @@ from sqlalchemy import text
 from app.persistence.session import SessionLocal
 from app.domain.seed import seed
 from app.core.config import get_settings
-from app.persistence.models import Merchant, Membership, Policy
-from app.domain.schemas import PolicyRules
+from app.persistence.models import Merchant, Membership
+from app.domain.workspace import create_store
 
 
 def main():
@@ -73,12 +73,7 @@ def main():
                 parser.error("--user-id must be an existing Supabase user UUID")
             if db.get(Merchant, "SELLER001"):
                 parser.error("A store already exists; use a fresh database")
-            db.add(Merchant(id="SELLER001", name=args.name, settings={}))
-            db.flush()
-            db.add(Membership(user_id=args.user_id, merchant_id="SELLER001", role="owner"))
-            db.add(
-                Policy(merchant_id="SELLER001", version=1, rules=PolicyRules().model_dump(), published=True)
-            )
+            create_store(db, "SELLER001", args.name, args.user_id)
             db.commit()
             print("Store and owner membership created")
 

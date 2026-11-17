@@ -1890,6 +1890,18 @@ td .subtle {
   min-height: 46px;
   margin: 6px 0 22px;
 }
+.login-form .google-auth {
+  margin-top: -10px;
+  background: var(--login-input);
+  color: var(--login-ink);
+  border-color: var(--login-border);
+}
+.auth-switch button {
+  color: var(--login-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .form-error {
   color: var(--red) !important;
 }

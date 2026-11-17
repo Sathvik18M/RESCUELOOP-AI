@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.core.auth import Principal, seller, owner, demo_only
+from app.core.auth import Principal, seller, owner, demo_only, supabase_user
 from app.core.config import get_settings
 from app.persistence.session import get_db
 from app.persistence.models import (
@@ -10,6 +11,7 @@ from app.persistence.models import (
     Conversation,
     Evidence,
     Merchant,
+    Membership,
     Order,
     Policy,
     Product,
@@ -20,8 +22,10 @@ from app.persistence.models import (
     Operation,
     ReturnRecord,
     now,
+    uid,
 )
 from app.domain.schemas import (
+    CreateWorkspaceInput,
     DecisionInput,
     MessageInput,
     HandoffInput,
@@ -40,11 +44,33 @@ from app.domain.cases import flag
 from app.domain.commerce import decision, pickup_action, inspect_return
 from app.domain.conversations import receive, set_handoff
 from app.domain.evidence import save_evidence
-from app.domain.workspace import workspace, cohort, topic_insights
+from app.domain.workspace import workspace, cohort, topic_insights, create_store
 from app.agents.specialists import policy_draft, analyze_insights
 from app.integrations.storage import MAX_BYTES, local_path, signed_url
 
 router = APIRouter(prefix="/api", tags=["seller"])
+
+
+@router.post("/workspace")
+def create_workspace(
+    data: CreateWorkspaceInput, user_id: str = Depends(supabase_user), db: Session = Depends(get_db)
+) -> dict[str, str]:
+    membership = db.get(Membership, user_id)
+    if membership:
+        return {"merchant_id": membership.merchant_id}
+    merchant_id = uid()
+    try:
+        create_store(db, merchant_id, data.name, user_id)
+        audit(db, merchant_id, user_id, "workspace.created", merchant_id)
+        db.commit()
+    except IntegrityError:
+        # The membership primary key also serializes simultaneous first-time submissions.
+        db.rollback()
+        membership = db.get(Membership, user_id)
+        if membership:
+            return {"merchant_id": membership.merchant_id}
+        raise
+    return {"merchant_id": merchant_id}
 
 
 @router.get("/workspace", response_model=WorkspaceView)

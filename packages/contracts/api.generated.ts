@@ -14,7 +14,8 @@ export interface paths {
         /** Get Workspace */
         get: operations["get_workspace_api_workspace_get"];
         put?: never;
-        post?: never;
+        /** Create Workspace */
+        post: operations["create_workspace_api_workspace_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -475,6 +476,11 @@ export interface components {
             /** Code */
             code?: string | null;
         };
+        /** CreateWorkspaceInput */
+        CreateWorkspaceInput: {
+            /** Name */
+            name: string;
+        };
         /** DecisionInput */
         DecisionInput: {
             /**
@@ -792,6 +798,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_workspace_api_workspace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkspaceInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.persistence.models import (
     Merchant,
+    Membership,
     Product,
     Order,
     Customer,
@@ -28,6 +29,14 @@ from app.persistence.models import (
     now,
 )
 from app.domain.common import record, utc
+from app.domain.schemas import PolicyRules
+
+
+def create_store(db, merchant_id, name, user_id):
+    db.add(Merchant(id=merchant_id, name=name, settings={}))
+    db.flush()
+    db.add(Membership(user_id=user_id, merchant_id=merchant_id, role="owner"))
+    db.add(Policy(merchant_id=merchant_id, version=1, rules=PolicyRules().model_dump(), published=True))
 
 
 def date_window(date_from=None, date_to=None):

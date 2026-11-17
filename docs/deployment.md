@@ -21,7 +21,15 @@ Readiness prints presence/status flags only, never secret values. It does not pr
 
 Create the private `evidence` bucket. Configure the server URL and privileged API key in `SUPABASE_SERVICE_ROLE_KEY` (the existing deployment uses a modern Supabase secret key), plus the same URL and public `anon` key for browser authentication. Keep privileged credentials server-side. Private object access uses expiring signed URLs: [Supabase private assets](https://supabase.com/docs/guides/storage/serving/downloads).
 
-Create the seller Auth user through your Supabase project. Provision that existing user UUID explicitly:
+Enable new-user signups and the Email provider in Supabase Auth. Set the Site URL to the dashboard origin and allow the dashboard root URL (including the trailing slash) for email confirmation and OAuth returns. Add the local dashboard URL when testing locally. [Supabase redirect settings](https://supabase.com/docs/guides/auth/redirect-urls)
+
+For public email confirmations, configure an SMTP sender in Supabase Auth. Supabase's default sender delivers only to project team members. [Supabase email delivery setup](https://supabase.com/docs/guides/auth/auth-smtp)
+
+Sellers can select **Sign up** on the login page. Supabase stores the account in `auth.users`. If email confirmation is enabled, the seller follows the emailed link before continuing. On first sign-in, a seller without a membership names their store. The API saves a new merchant, owner membership, and initial published policy together. Existing members go directly to their assigned workspace.
+
+For **Continue with Google**, create a Google OAuth web client, add the dashboard origin to its authorized JavaScript origins, and register the callback URL shown by Supabase as an authorized redirect URI in Google. Enter the client ID and secret in Supabase Auth's Google provider settings and enable the provider. The login page reads the project's public Auth settings and shows the button when Google is enabled. [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google)
+
+To assign a seller to an existing store, create their Supabase Auth account and provision their UUID before they create a workspace:
 
 ```powershell
 .venv/Scripts/python.exe -m app.cli provision-owner --store SELLER001 --user-id YOUR_AUTH_USER_UUID
