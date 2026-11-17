@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 export async function api<T>(
   path: string,
-  token: string,
+  token: string | null,
   init: RequestInit = {},
 ): Promise<T> {
   const response = await fetch(`${API_URL}/api${path}`, {
@@ -20,7 +20,7 @@ export async function api<T>(
       ...(init.body instanceof FormData
         ? {}
         : { "Content-Type": "application/json" }),
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });

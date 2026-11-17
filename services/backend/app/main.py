@@ -5,6 +5,7 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.persistence.session import engine
 from app.api.routes import router
+from app.api.accounts import router as accounts
 from app.api.webhooks import router as webhooks
 from app.api.dialog360_webhooks import router as dialog360_webhooks
 from app.core.logging import protect_webhook_logs
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(router)
+app.include_router(accounts)
 app.include_router(webhooks)
 app.include_router(dialog360_webhooks)
 protect_webhook_logs()

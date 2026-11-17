@@ -3,15 +3,12 @@ let client: SupabaseClient | undefined;
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export async function googleSignInEnabled(
-  signal: AbortSignal,
-): Promise<boolean> {
-  if (!url || !key) return false;
-  const response = await fetch(new URL("/auth/v1/settings", url), {
-    headers: { apikey: key },
-    signal,
-  });
-  return response.ok && (await response.json()).external?.google === true;
+export function passwordLoginId(identifier: string) {
+  const value = identifier.trim();
+  // Existing sellers keep their original Supabase identity.
+  return value.includes("@")
+    ? value
+    : value.toLowerCase() + "@usernames.rescueloop.invalid";
 }
 
 export function supabase() {

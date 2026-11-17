@@ -4,7 +4,7 @@ import Image from "next/image";
 import { ArrowUpRight, LoaderCircle, Moon, Sun } from "lucide-react";
 import { RotatingGlobe } from "@/components/RotatingGlobe";
 import { api, DEMO } from "@/lib/api";
-import { googleSignInEnabled, supabase } from "@/lib/auth";
+import { passwordLoginId, supabase } from "@/lib/auth";
 
 function AuthForm({
   title,
@@ -69,79 +69,51 @@ export function Login({
   initialError: string;
 }) {
   const [signup, setSignup] = useState(false);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [demoToken, setDemoToken] = useState("local-rescueloop-demo");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorMessage = error ?? initialError;
-  const [notice, setNotice] = useState("");
-  const [googleEnabled, setGoogleEnabled] = useState(false);
-
-  useEffect(() => {
-    if (DEMO) return;
-    const controller = new AbortController();
-    googleSignInEnabled(controller.signal)
-      .then(setGoogleEnabled)
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       if (DEMO) {
         await api("/workspace", demoToken);
         onDemoLogin(demoToken);
         return;
       }
-      const credentials = { email: email.trim(), password };
+      let identifier = username.trim();
       if (signup) {
-        const { data, error } = await supabase().auth.signUp({
-          ...credentials,
-          options: { emailRedirectTo: window.location.origin + "/" },
+        const account = await api<{ username: string }>("/auth/signup", null, {
+          method: "POST",
+          body: JSON.stringify({ username: identifier, password }),
         });
-        if (error) throw error;
-        if (!data.session) {
-          setNotice(
-            "Check your inbox for a confirmation link. If you already have an account, sign in below.",
+        identifier = account.username;
+        setUsername(identifier);
+        setSignup(false);
+      }
+      const { error } = await supabase().auth.signInWithPassword({
+        email: passwordLoginId(identifier),
+        password,
+      });
+      if (error) {
+        if (signup)
+          throw new Error(
+            "Your account was created. Sign in to open your store.",
           );
-          setSignup(false);
-          setPassword("");
-        }
-      } else {
-        const { error } = await supabase().auth.signInWithPassword(credentials);
-        if (error) throw error;
+        if (error.code === "invalid_credentials")
+          throw new Error("Incorrect username or password.");
+        throw error;
       }
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Could not complete your request. Please try again.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function continueWithGoogle() {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const { error } = await supabase().auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin + "/" },
-      });
-      if (error) throw error;
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Could not connect to Google. Please try again.",
       );
     } finally {
       setBusy(false);
@@ -160,11 +132,6 @@ export function Login({
       }
       onSubmit={submit}
     >
-      {notice && (
-        <div className="notice" role="status">
-          {notice}
-        </div>
-      )}
       {DEMO ? (
         <>
           <div className="notice">Local verification · Synthetic demo data</div>
@@ -181,22 +148,36 @@ export function Login({
       ) : (
         <>
           <label>
-            Email address
+            Username
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              pattern={signup ? "[A-Za-z0-9][A-Za-z0-9_]{2,31}" : undefined}
+              maxLength={signup ? 32 : undefined}
+              aria-describedby="username-hint"
               required
             />
           </label>
+          <p className="auth-hint" id="username-hint">
+            {signup
+              ? "Use 3–32 letters, numbers or underscores. Start with a letter or number."
+              : "Existing sellers can also sign in with their original email address."}
+          </p>
           <label>
             Password
             <input
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={signup ? "new-password" : "current-password"}
+              minLength={signup ? 8 : undefined}
+              placeholder={signup ? "At least 8 characters" : undefined}
               required
             />
           </label>
@@ -216,16 +197,6 @@ export function Login({
             : "Sign in"}
         <ArrowUpRight size={16} />
       </button>
-      {googleEnabled && (
-        <button
-          className="button full google-auth"
-          type="button"
-          onClick={continueWithGoogle}
-          disabled={busy}
-        >
-          Continue with Google
-        </button>
-      )}
       {!DEMO && (
         <p className="auth-switch">
           {signup ? "Already have an account? " : "New to RescueLoop? "}
@@ -235,7 +206,6 @@ export function Login({
             onClick={() => {
               setSignup(!signup);
               setError("");
-              setNotice("");
               setPassword("");
             }}
           >
