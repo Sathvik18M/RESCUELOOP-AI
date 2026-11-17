@@ -130,3 +130,17 @@ cd services/backend
 Reset requires development demo mode and synthetic seed provenance. It removes that store’s records, queued jobs, private evidence (including orphaned uploads) and conversation checkpoints. Other stores remain intact. Reset refuses active worker heartbeats/leases. Storage deletion must succeed before database references are removed. The audit records the explicit reset. Use only the intended isolated demo database.
 
 Sachin S Kumar i am doing the developer 
+
+
+Team & Contributions
+
+Team Mysuru TechBrosss (Hackathon PS-04: Shopping / Delivery / Support)
+
+Samrudh (Project Lead)
+- Led the project from concept to working prototype, and owned the GitHub repository and final submission
+- Set up and ran the full stack locally: FastAPI backend, SQLite database, and the single-page demo UI
+- Integrated the LLM agent layer using OpenAI-compatible tool calling, configured to run on a free Groq model via environment variables
+- Tested the end-to-end flows: failed-delivery rescue with OTP consent, return creation, blocked over-limit refund with human escalation, and the cross-customer ownership check
+- Debugged environment and deployment issues (model availability, port conflicts, secret handling) and kept API keys out of the repo
+
+
